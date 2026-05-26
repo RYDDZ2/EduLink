@@ -1,0 +1,50 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+
+import 'screens/auth_gate.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ),
+  );
+  runApp(const EduLinkApp());
+}
+
+class EduLinkApp extends StatelessWidget {
+  const EduLinkApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'EduLink',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A1A1A),
+        ),
+        fontFamily: 'SF Pro Display',
+        splashFactory: InkRipple.splashFactory,
+        highlightColor: Colors.transparent,
+        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          backgroundColor: Color(0xFFF8F9FA),
+          surfaceTintColor: Colors.transparent,
+          systemOverlayStyle: SystemUiOverlayStyle.dark,
+        ),
+        tabBarTheme: const TabBarThemeData(
+          dividerColor: Colors.transparent,
+        ),
+      ),
+      home: const AuthGate(),
+    );
+  }
+}

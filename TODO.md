@@ -1,5 +1,0 @@
-- [ ] Konfirmasi rules Firestore aktif
-- [ ] Ganti Firestore rules menjadi yang mengizinkan user membaca/menulis dokumen `users/{uid}` miliknya sendiri
-- [ ] (Opsional) Tambahkan rules untuk mengizinkan read global yang dibutuhkan app
-- [ ] Jalankan aplikasi: coba register, pastikan write berhasil dan profil ditemukan saat login
-- [ ] Jika masih gagal, cek: nama koleksi, struktur dokumen, dan apakah ada rule lain yang lebih spesifik

@@ -1,4 +1,7 @@
-import '../models/models.dart';
+import '../models/booking_model.dart';
+import '../models/help_request_model.dart';
+import '../models/quiz_model.dart';
+import '../models/tutor_session_model.dart';
 
 class DummyData {
   static final List<HelpRequest> helpRequests = [
@@ -139,6 +142,45 @@ class DummyData {
       kpCost: 105,
       status: BookingStatus.pending,
       notes: 'Mau belajar polymorphism dan abstract class',
+    ),
+  ];
+
+  static final List<Quiz> quizzes = [
+    Quiz(
+      id: 'quiz-001',
+      tutorId: 'user-10',
+      title: 'Kuis Gelombang Mekanik',
+      topic: 'Fisika - Gelombang',
+      targetStudentName: 'Nadia Prameswari',
+      difficulty: QuizDifficulty.intermediate,
+      materialText:
+          'Gelombang mekanik memerlukan medium untuk merambat. Besaran penting meliputi amplitudo, frekuensi, periode, panjang gelombang, dan cepat rambat gelombang.',
+      status: QuizStatus.draft,
+      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+    ),
+    Quiz(
+      id: 'quiz-002',
+      tutorId: 'user-12',
+      title: 'Dasar OOP Python',
+      topic: 'Pemrograman',
+      targetStudentName: 'Rizal Fadhil',
+      difficulty: QuizDifficulty.beginner,
+      materialText:
+          'Object-oriented programming menggunakan class dan object untuk memodelkan data serta perilaku. Konsep utama meliputi inheritance, encapsulation, dan polymorphism.',
+      status: QuizStatus.draft,
+      createdAt: DateTime.now().subtract(const Duration(hours: 8)),
+    ),
+    Quiz(
+      id: 'quiz-003',
+      tutorId: 'user-11',
+      title: 'Reaksi Redoks Singkat',
+      topic: 'Kimia',
+      targetStudentName: 'Aditya Wijaya',
+      difficulty: QuizDifficulty.advanced,
+      materialText:
+          'Reaksi redoks melibatkan perpindahan elektron. Oksidasi adalah pelepasan elektron, sedangkan reduksi adalah penerimaan elektron.',
+      status: QuizStatus.draft,
+      createdAt: DateTime.now().subtract(const Duration(days: 2)),
     ),
   ];
 }

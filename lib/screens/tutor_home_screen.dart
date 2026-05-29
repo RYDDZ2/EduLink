@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../models/models.dart';
+import '../models/help_request_model.dart';
+import '../models/quiz_model.dart';
+import '../models/tutor_session_model.dart';
+import '../models/user_model.dart';
 import '../data/dummy_data.dart';
 import '../services/auth_service.dart';
+import '../widgets/create_quiz_sheet.dart';
 import '../widgets/create_tutor_session_sheet.dart';
 import '../widgets/common_widgets.dart';
 import 'help_requests_tab.dart';
+import 'quiz_dashboard_tab.dart';
 import 'tutors_tab.dart';
 import 'tutor_activity_tab.dart';
 
@@ -13,7 +18,6 @@ class TutorHomeScreen extends StatefulWidget {
   final AppUser currentUser;
 
   const TutorHomeScreen({super.key, required this.currentUser});
-
 
   @override
   State<TutorHomeScreen> createState() => _TutorHomeScreenState();
@@ -24,11 +28,25 @@ class _TutorHomeScreenState extends State<TutorHomeScreen>
   late final TabController _tabController;
   final List<HelpRequest> _requests = List.from(DummyData.helpRequests);
   final List<TutorSession> _sessions = List.from(DummyData.availableTutors);
+  final List<Quiz> _quizzes = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() => setState(() {}));
+    _quizzes.addAll(DummyData.quizzes);
+    if (!_quizzes.any((quiz) => quiz.tutorId == widget.currentUser.id)) {
+      _quizzes.insertAll(
+        0,
+        DummyData.quizzes.take(2).map(
+              (quiz) => quiz.copyWith(
+                id: '${quiz.id}-${widget.currentUser.id}',
+                tutorId: widget.currentUser.id,
+              ),
+            ),
+      );
+    }
   }
 
   @override
@@ -92,6 +110,44 @@ class _TutorHomeScreenState extends State<TutorHomeScreen>
     );
   }
 
+  void _onQuizCreated(Quiz quiz) {
+    setState(() => _quizzes.insert(0, quiz));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Quiz draft berhasil dibuat!'),
+        backgroundColor: Color(0xFF085041),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _onQuizUpdated(Quiz quiz) {
+    setState(() {
+      final idx = _quizzes.indexWhere((q) => q.id == quiz.id);
+      if (idx != -1) _quizzes[idx] = quiz;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Quiz draft berhasil diperbarui'),
+        backgroundColor: Color(0xFF085041),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _onQuizDeleted(String id) {
+    setState(() => _quizzes.removeWhere((quiz) => quiz.id == id));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Quiz draft dihapus'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   void _showCreateTutorSheet() {
     showModalBottomSheet(
       context: context,
@@ -100,6 +156,31 @@ class _TutorHomeScreenState extends State<TutorHomeScreen>
       builder: (_) => CreateTutorSessionSheet(
         currentUser: widget.currentUser,
         onCreated: _onCreateTutorSession,
+      ),
+    );
+  }
+
+  void _showCreateQuizSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CreateQuizSheet(
+        currentUser: widget.currentUser,
+        onSaved: _onQuizCreated,
+      ),
+    );
+  }
+
+  void _showEditQuizSheet(Quiz quiz) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CreateQuizSheet(
+        currentUser: widget.currentUser,
+        quiz: quiz,
+        onSaved: _onQuizUpdated,
       ),
     );
   }
@@ -174,16 +255,13 @@ class _TutorHomeScreenState extends State<TutorHomeScreen>
                 ),
               ),
               const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'logout',
-                child: Text('Logout'),
-              ),
+              const PopupMenuItem(value: 'logout', child: Text('Logout')),
             ],
             child: Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE1F5EE),
+              decoration: const BoxDecoration(
+                color: Color(0xFFE1F5EE),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -226,13 +304,20 @@ class _TutorHomeScreenState extends State<TutorHomeScreen>
               indicatorSize: TabBarIndicatorSize.tab,
               labelColor: Colors.black87,
               unselectedLabelColor: Colors.black38,
-              labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-              unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              labelStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
               dividerColor: Colors.transparent,
               tabs: const [
                 Tab(text: 'Permintaan'),
                 Tab(text: 'Sesi tutor'),
                 Tab(text: 'Aktivitas'),
+                Tab(text: 'Test'),
               ],
             ),
           ),
@@ -248,15 +333,17 @@ class _TutorHomeScreenState extends State<TutorHomeScreen>
                   onOfferHelp: _onOfferHelp,
                   onDelete: _onDeleteRequest,
                 ),
-                TutorsTab(
-                  tutors: _sessions,
-                  canBook: false,
-                  onBooked: (_) {},
-                ),
+                TutorsTab(tutors: _sessions, canBook: false, onBooked: (_) {}),
                 TutorActivityTab(
                   currentUser: widget.currentUser,
                   sessions: _sessions,
                   requests: _requests,
+                ),
+                QuizDashboardTab(
+                  quizzes: _quizzes,
+                  currentUser: widget.currentUser,
+                  onEdit: _showEditQuizSheet,
+                  onDelete: _onQuizDeleted,
                 ),
               ],
             ),
@@ -274,8 +361,18 @@ class _TutorHomeScreenState extends State<TutorHomeScreen>
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               ),
             )
-          : null,
+          : _tabController.index == 3 && _isTutor
+              ? FloatingActionButton.extended(
+                  onPressed: _showCreateQuizSheet,
+                  backgroundColor: Colors.black87,
+                  foregroundColor: Colors.white,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text(
+                    'Buat Quiz',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                )
+              : null,
     );
   }
 }
-

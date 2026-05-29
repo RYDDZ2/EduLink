@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/models.dart';
+import '../models/booking_model.dart';
+import '../models/tutor_session_model.dart';
 import '../widgets/common_widgets.dart';
 
 class BookSessionSheet extends StatefulWidget {

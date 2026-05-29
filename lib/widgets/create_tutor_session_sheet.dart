@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../models/models.dart';
+import '../models/tutor_session_model.dart';
+import '../models/user_model.dart';
 import 'common_widgets.dart';
 
 class CreateTutorSessionSheet extends StatefulWidget {

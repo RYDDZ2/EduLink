@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../models/models.dart';
+import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
 class AuthScreen extends StatefulWidget {

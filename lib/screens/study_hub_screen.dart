@@ -3,54 +3,95 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../widgets/common_widgets.dart';
 
-class StudyHubScreen extends StatelessWidget {
+const _kHubs = [
+  _StudyHub(
+    title: 'AP Calculus BC - Integration Techniques',
+    description:
+        'Diskusi teknik substitusi, parsial, dan strategi memilih metode integral.',
+    tags: ['Kalkulus', 'Integral', 'STEM'],
+    members: 42,
+    activeThreads: 8,
+    nextSession: 'Hari ini, 19.00',
+    color: Color(0xFFE6F1FB),
+    icon: Icons.functions_rounded,
+  ),
+  _StudyHub(
+    title: 'Python Basics for Beginners',
+    description:
+        'Belajar bareng struktur data, function, debugging, dan mini project.',
+    tags: ['Python', 'Coding', 'Beginner'],
+    members: 36,
+    activeThreads: 12,
+    nextSession: 'Besok, 16.30',
+    color: Color(0xFFE1F5EE),
+    icon: Icons.code_rounded,
+  ),
+  _StudyHub(
+    title: 'Kimia Organik - Reaksi & Mekanisme',
+    description:
+        'Brainstorming pola reaksi, latihan soal, dan rangkuman mekanisme penting.',
+    tags: ['Kimia', 'Reaksi', 'UTS'],
+    members: 28,
+    activeThreads: 5,
+    nextSession: 'Jumat, 20.00',
+    color: Color(0xFFFAEEDA),
+    icon: Icons.science_rounded,
+  ),
+];
+
+const _kThreads = [
+  _Thread('Cara cepat bedain substitusi vs parsial?', 'Sinta Rahayu', 14,
+      ['Kalkulus', 'Integral']),
+  _Thread('Share template catatan Python minggu ini', 'Bagas Ramadhan', 9,
+      ['Python', 'Coding']),
+  _Thread('Latihan stoikiometri yang sering keluar', 'Aditya Wijaya', 21,
+      ['Kimia', 'UTS']),
+];
+
+class StudyHubScreen extends StatefulWidget {
   final AppUser currentUser;
 
   const StudyHubScreen({super.key, required this.currentUser});
 
   @override
-  Widget build(BuildContext context) {
-    const hubs = [
-      _StudyHub(
-        title: 'AP Calculus BC - Integration Techniques',
-        description:
-            'Diskusi teknik substitusi, parsial, dan strategi memilih metode integral.',
-        tags: ['Kalkulus', 'Integral', 'STEM'],
-        members: 42,
-        activeThreads: 8,
-        nextSession: 'Hari ini, 19.00',
-        color: Color(0xFFE6F1FB),
-        icon: Icons.functions_rounded,
-      ),
-      _StudyHub(
-        title: 'Python Basics for Beginners',
-        description:
-            'Belajar bareng struktur data, function, debugging, dan mini project.',
-        tags: ['Python', 'Coding', 'Beginner'],
-        members: 36,
-        activeThreads: 12,
-        nextSession: 'Besok, 16.30',
-        color: Color(0xFFE1F5EE),
-        icon: Icons.code_rounded,
-      ),
-      _StudyHub(
-        title: 'Kimia Organik - Reaksi & Mekanisme',
-        description:
-            'Brainstorming pola reaksi, latihan soal, dan rangkuman mekanisme penting.',
-        tags: ['Kimia', 'Reaksi', 'UTS'],
-        members: 28,
-        activeThreads: 5,
-        nextSession: 'Jumat, 20.00',
-        color: Color(0xFFFAEEDA),
-        icon: Icons.science_rounded,
-      ),
-    ];
+  State<StudyHubScreen> createState() => _StudyHubScreenState();
+}
 
-    const threads = [
-      _Thread('Cara cepat bedain substitusi vs parsial?', 'Sinta Rahayu', 14),
-      _Thread('Share template catatan Python minggu ini', 'Bagas Ramadhan', 9),
-      _Thread('Latihan stoikiometri yang sering keluar', 'Aditya Wijaya', 21),
-    ];
+class _StudyHubScreenState extends State<StudyHubScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<_StudyHub> get _filteredHubs {
+    if (_searchQuery.isEmpty) return _kHubs;
+    final q = _searchQuery.toLowerCase();
+    return _kHubs.where((hub) {
+      return hub.title.toLowerCase().contains(q) ||
+          hub.description.toLowerCase().contains(q) ||
+          hub.tags.any((tag) => tag.toLowerCase().contains(q));
+    }).toList();
+  }
+
+  List<_Thread> get _filteredThreads {
+    if (_searchQuery.isEmpty) return _kThreads;
+    final q = _searchQuery.toLowerCase();
+    return _kThreads.where((thread) {
+      return thread.title.toLowerCase().contains(q) ||
+          thread.author.toLowerCase().contains(q) ||
+          thread.tags.any((tag) => tag.toLowerCase().contains(q));
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hubs = _filteredHubs;
+    final threads = _filteredThreads;
+    final hasResults = hubs.isNotEmpty || threads.isNotEmpty;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -58,18 +99,30 @@ class StudyHubScreen extends StatelessWidget {
         titleSpacing: 16,
         title: _EduTitle(
           subtitle: 'Community Study Hubs',
-          initials: currentUser.initials,
+          initials: widget.currentUser.initials,
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           TextField(
+            controller: _searchController,
+            onChanged: (value) => setState(() => _searchQuery = value.trim()),
             decoration: InputDecoration(
               hintText: 'Cari hub, topik, atau tag...',
               hintStyle: const TextStyle(fontSize: 13, color: Colors.black38),
               prefixIcon:
                   const Icon(Icons.search_rounded, color: Colors.black38),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded,
+                          size: 18, color: Colors.black38),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
               filled: true,
               fillColor: Colors.grey.shade100,
               border: OutlineInputBorder(
@@ -80,29 +133,50 @@ class StudyHubScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          const Row(
-            children: [
-              _SummaryCard(
-                  label: 'Hub Aktif', value: '18', color: Color(0xFFE6F1FB)),
-              SizedBox(width: 8),
-              _SummaryCard(
-                  label: 'Diskusi', value: '47', color: Color(0xFFE1F5EE)),
-              SizedBox(width: 8),
-              _SummaryCard(
-                  label: 'Joined', value: '5', color: Color(0xFFFAEEDA)),
+          if (_searchQuery.isEmpty) ...[
+            const Row(
+              children: [
+                _SummaryCard(
+                    label: 'Hub Aktif', value: '18', color: Color(0xFFE6F1FB)),
+                SizedBox(width: 8),
+                _SummaryCard(
+                    label: 'Diskusi', value: '47', color: Color(0xFFE1F5EE)),
+                SizedBox(width: 8),
+                _SummaryCard(
+                    label: 'Joined', value: '5', color: Color(0xFFFAEEDA)),
+              ],
+            ),
+            const SizedBox(height: 18),
+          ],
+          if (!hasResults) ...[
+            const SizedBox(height: 40),
+            _EmptySearch(query: _searchQuery),
+          ] else ...[
+            if (hubs.isNotEmpty) ...[
+              _SectionHeader(
+                title: _searchQuery.isEmpty
+                    ? 'Recommended Hubs'
+                    : 'Hub (${hubs.length})',
+                action: _searchQuery.isEmpty ? 'Buat Hub' : '',
+              ),
+              const SizedBox(height: 10),
+              ...hubs.map((hub) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _StudyHubCard(hub: hub, query: _searchQuery),
+                  )),
+              const SizedBox(height: 8),
             ],
-          ),
-          const SizedBox(height: 18),
-          const _SectionHeader(title: 'Recommended Hubs', action: 'Buat Hub'),
-          const SizedBox(height: 10),
-          ...hubs.map((hub) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _StudyHubCard(hub: hub),
-              )),
-          const SizedBox(height: 8),
-          const _SectionHeader(title: 'Diskusi Terbaru', action: 'Lihat Semua'),
-          const SizedBox(height: 10),
-          ...threads.map((thread) => _ThreadTile(thread: thread)),
+            if (threads.isNotEmpty) ...[
+              _SectionHeader(
+                title: _searchQuery.isEmpty
+                    ? 'Diskusi Terbaru'
+                    : 'Diskusi (${threads.length})',
+                action: _searchQuery.isEmpty ? 'Lihat Semua' : '',
+              ),
+              const SizedBox(height: 10),
+              ...threads.map((thread) => _ThreadTile(thread: thread)),
+            ],
+          ],
         ],
       ),
     );
@@ -181,14 +255,16 @@ class _Thread {
   final String title;
   final String author;
   final int replies;
+  final List<String> tags;
 
-  const _Thread(this.title, this.author, this.replies);
+  const _Thread(this.title, this.author, this.replies, this.tags);
 }
 
 class _StudyHubCard extends StatelessWidget {
   final _StudyHub hub;
+  final String query;
 
-  const _StudyHubCard({required this.hub});
+  const _StudyHubCard({required this.hub, required this.query});
 
   @override
   Widget build(BuildContext context) {
@@ -226,8 +302,9 @@ class _StudyHubCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      hub.title,
+                    _HighlightText(
+                      text: hub.title,
+                      query: query,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
@@ -235,8 +312,9 @@ class _StudyHubCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      hub.description,
+                    _HighlightText(
+                      text: hub.description,
+                      query: query,
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.black54,
@@ -371,15 +449,87 @@ class _SectionHeader extends StatelessWidget {
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
           ),
         ),
-        Text(
-          action,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF085041),
+        if (action.isNotEmpty)
+          Text(
+            action,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF085041),
+            ),
           ),
+      ],
+    );
+  }
+}
+
+class _EmptySearch extends StatelessWidget {
+  final String query;
+
+  const _EmptySearch({required this.query});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Icon(Icons.search_off_rounded, size: 48, color: Colors.black26),
+        const SizedBox(height: 12),
+        Text(
+          'Tidak ada hasil untuk "$query"',
+          style: const TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black54),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Coba kata kunci lain seperti nama mata pelajaran atau tag.',
+          style: TextStyle(fontSize: 12, color: Colors.black38),
+          textAlign: TextAlign.center,
         ),
       ],
     );
+  }
+}
+
+/// Renders [text] with occurrences of [query] highlighted in bold.
+class _HighlightText extends StatelessWidget {
+  final String text;
+  final String query;
+  final TextStyle style;
+
+  const _HighlightText({
+    required this.text,
+    required this.query,
+    required this.style,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (query.isEmpty) return Text(text, style: style);
+
+    final q = query.toLowerCase();
+    final lower = text.toLowerCase();
+    final spans = <TextSpan>[];
+    int start = 0;
+
+    while (true) {
+      final idx = lower.indexOf(q, start);
+      if (idx == -1) {
+        spans.add(TextSpan(text: text.substring(start)));
+        break;
+      }
+      if (idx > start) spans.add(TextSpan(text: text.substring(start, idx)));
+      spans.add(TextSpan(
+        text: text.substring(idx, idx + q.length),
+        style: style.copyWith(
+          fontWeight: FontWeight.w900,
+          color: const Color(0xFF085041),
+          backgroundColor: const Color(0xFFD6F5EA),
+        ),
+      ));
+      start = idx + q.length;
+    }
+
+    return RichText(text: TextSpan(style: style, children: spans));
   }
 }

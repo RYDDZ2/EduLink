@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'edulink-98008.firebasestorage.app',
     measurementId: 'G-HKWGCDFDVK',
   );
+
 }

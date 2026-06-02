@@ -27,12 +27,16 @@ class _BookSessionSheetState extends State<BookSessionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardInset = mediaQuery.viewInsets.bottom;
+    final safeBottom = mediaQuery.viewPadding.bottom;
+
     return Container(
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: (keyboardInset > 0 ? keyboardInset : safeBottom) + 24,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,

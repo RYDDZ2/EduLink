@@ -4,9 +4,8 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import 'auth_screen.dart';
-import 'marketplace_screen.dart';
+import 'student_home_screen.dart';
 import 'tutor_home_screen.dart';
-
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -41,8 +40,7 @@ class AuthGate extends StatelessWidget {
             if (user.role == UserRole.tutor) {
               return TutorHomeScreen(currentUser: user);
             }
-            return MarketplaceScreen(currentUser: user);
-
+            return StudentHomeScreen(currentUser: user);
           },
         );
       },

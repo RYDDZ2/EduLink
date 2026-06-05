@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../models/help_request_model.dart';
-import '../models/quiz_model.dart';
 import '../models/tutor_session_model.dart';
 import '../models/user_model.dart';
 import '../data/dummy_data.dart';
@@ -28,25 +27,12 @@ class _TutorHomeScreenState extends State<TutorHomeScreen>
   late final TabController _tabController;
   final List<HelpRequest> _requests = List.from(DummyData.helpRequests);
   final List<TutorSession> _sessions = List.from(DummyData.availableTutors);
-  final List<Quiz> _quizzes = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() => setState(() {}));
-    _quizzes.addAll(DummyData.quizzes);
-    if (!_quizzes.any((quiz) => quiz.tutorId == widget.currentUser.id)) {
-      _quizzes.insertAll(
-        0,
-        DummyData.quizzes.take(2).map(
-              (quiz) => quiz.copyWith(
-                id: '${quiz.id}-${widget.currentUser.id}',
-                tutorId: widget.currentUser.id,
-              ),
-            ),
-      );
-    }
   }
 
   @override
@@ -110,44 +96,6 @@ class _TutorHomeScreenState extends State<TutorHomeScreen>
     );
   }
 
-  void _onQuizCreated(Quiz quiz) {
-    setState(() => _quizzes.insert(0, quiz));
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Quiz draft berhasil dibuat!'),
-        backgroundColor: Color(0xFF085041),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _onQuizUpdated(Quiz quiz) {
-    setState(() {
-      final idx = _quizzes.indexWhere((q) => q.id == quiz.id);
-      if (idx != -1) _quizzes[idx] = quiz;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Quiz draft berhasil diperbarui'),
-        backgroundColor: Color(0xFF085041),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _onQuizDeleted(String id) {
-    setState(() => _quizzes.removeWhere((quiz) => quiz.id == id));
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Quiz draft dihapus'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   void _showCreateTutorSheet() {
     showModalBottomSheet(
       context: context,
@@ -167,20 +115,6 @@ class _TutorHomeScreenState extends State<TutorHomeScreen>
       backgroundColor: Colors.transparent,
       builder: (_) => CreateQuizSheet(
         currentUser: widget.currentUser,
-        onSaved: _onQuizCreated,
-      ),
-    );
-  }
-
-  void _showEditQuizSheet(Quiz quiz) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => CreateQuizSheet(
-        currentUser: widget.currentUser,
-        quiz: quiz,
-        onSaved: _onQuizUpdated,
       ),
     );
   }
@@ -340,10 +274,7 @@ class _TutorHomeScreenState extends State<TutorHomeScreen>
                   requests: _requests,
                 ),
                 QuizDashboardTab(
-                  quizzes: _quizzes,
                   currentUser: widget.currentUser,
-                  onEdit: _showEditQuizSheet,
-                  onDelete: _onQuizDeleted,
                 ),
               ],
             ),

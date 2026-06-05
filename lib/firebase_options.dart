@@ -51,19 +51,19 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBrSUGvKkBK45KezIq3zpE30fj68WffheM',
-    appId: '1:586811051172:android:dce7e76bebe0bf3141aa31',
-    messagingSenderId: '586811051172',
-    projectId: 'edulink-98008',
-    storageBucket: 'edulink-98008.firebasestorage.app',
+    apiKey: 'AIzaSyA7Vcs4icDid_cvqwXQS-gWA9jgNmVHENI',
+    appId: '1:125112736402:android:4c20455f0f345dd4cba44b',
+    messagingSenderId: '125112736402',
+    projectId: 'fp-ppb-7a2fe',
+    storageBucket: 'fp-ppb-7a2fe.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCH1wx4MaLRmpUXvrIrMgAFsUeDy7BFETk',
-    appId: '1:586811051172:ios:ce4e81c419294c8541aa31',
-    messagingSenderId: '586811051172',
-    projectId: 'edulink-98008',
-    storageBucket: 'edulink-98008.firebasestorage.app',
+    apiKey: 'AIzaSyD3wer-4icgB9JzqWeQ64LvcK8WoGSo32o',
+    appId: '1:125112736402:ios:b9fad0402ab7b4ddcba44b',
+    messagingSenderId: '125112736402',
+    projectId: 'fp-ppb-7a2fe',
+    storageBucket: 'fp-ppb-7a2fe.firebasestorage.app',
     iosBundleId: 'com.example.edulink',
   );
 

@@ -2,20 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../models/quiz_model.dart';
 import '../models/user_model.dart';
+import '../services/quiz_service.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/create_quiz_sheet.dart';
 
 class QuizDashboardTab extends StatefulWidget {
-  final List<Quiz> quizzes;
   final AppUser currentUser;
-  final ValueChanged<Quiz> onEdit;
-  final ValueChanged<String> onDelete;
 
   const QuizDashboardTab({
     super.key,
-    required this.quizzes,
     required this.currentUser,
-    required this.onEdit,
-    required this.onDelete,
   });
 
   @override
@@ -24,20 +20,10 @@ class QuizDashboardTab extends StatefulWidget {
 
 class _QuizDashboardTabState extends State<QuizDashboardTab> {
   String _searchQuery = '';
+  bool _isDeleting = false;
 
   @override
   Widget build(BuildContext context) {
-    final tutorQuizzes = widget.quizzes
-        .where((quiz) => quiz.tutorId == widget.currentUser.id)
-        .toList();
-    final filtered = tutorQuizzes.where((quiz) {
-      if (_searchQuery.isEmpty) return true;
-      final q = _searchQuery.toLowerCase();
-      return quiz.title.toLowerCase().contains(q) ||
-          quiz.topic.toLowerCase().contains(q) ||
-          quiz.targetStudentName.toLowerCase().contains(q);
-    }).toList();
-
     return Column(
       children: [
         Padding(
@@ -64,23 +50,74 @@ class _QuizDashboardTabState extends State<QuizDashboardTab> {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: filtered.isEmpty
-              ? _EmptyQuizState(hasQuizzes: tutorQuizzes.isNotEmpty)
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 88),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (_, index) {
-                    final quiz = filtered[index];
-                    return _QuizCard(
-                      quiz: quiz,
-                      onEdit: () => widget.onEdit(quiz),
-                      onDelete: () => _confirmDelete(context, quiz),
-                    );
-                  },
-                ),
+          child: StreamBuilder<List<Quiz>>(
+            stream: QuizService.tutorQuizzes(widget.currentUser.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.black87),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return const _EmptyQuizState(
+                  icon: Icons.cloud_off_outlined,
+                  title: 'Quiz belum bisa dimuat',
+                  message: 'Coba buka kembali tab ini sebentar lagi.',
+                );
+              }
+
+              final quizzes = snapshot.data ?? [];
+              final filtered = quizzes.where((quiz) {
+                if (_searchQuery.isEmpty) return true;
+                final q = _searchQuery.toLowerCase();
+                return quiz.title.toLowerCase().contains(q) ||
+                    quiz.topic.toLowerCase().contains(q) ||
+                    quiz.studentName.toLowerCase().contains(q);
+              }).toList();
+
+              if (filtered.isEmpty) {
+                return _EmptyQuizState(
+                  icon: Icons.quiz_outlined,
+                  title: quizzes.isEmpty
+                      ? 'Belum ada materi quiz'
+                      : 'Quiz tidak ditemukan',
+                  message: quizzes.isEmpty
+                      ? 'Buat materi pertama dari tombol tambah.'
+                      : 'Coba gunakan kata kunci lain.',
+                );
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 88),
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, index) {
+                  final quiz = filtered[index];
+                  return _QuizCard(
+                    quiz: quiz,
+                    isDeleting: _isDeleting,
+                    onEdit: () => _showEditQuizSheet(quiz),
+                    onDelete: () => _confirmDelete(context, quiz),
+                  );
+                },
+              );
+            },
+          ),
         ),
       ],
+    );
+  }
+
+  void _showEditQuizSheet(Quiz quiz) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CreateQuizSheet(
+        currentUser: widget.currentUser,
+        quiz: quiz,
+      ),
     );
   }
 
@@ -91,7 +128,7 @@ class _QuizDashboardTabState extends State<QuizDashboardTab> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Hapus Quiz?', style: TextStyle(fontSize: 16)),
         content: Text(
-          '"${quiz.title}" akan dihapus dari draft lokal.',
+          '"${quiz.title}" akan dihapus dari Firestore.',
           style: const TextStyle(fontSize: 13),
         ),
         actions: [
@@ -100,9 +137,9 @@ class _QuizDashboardTabState extends State<QuizDashboardTab> {
             child: const Text('Batal'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              widget.onDelete(quiz.id);
+              await _deleteQuiz(quiz.id);
             },
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
@@ -110,15 +147,41 @@ class _QuizDashboardTabState extends State<QuizDashboardTab> {
       ),
     );
   }
+
+  Future<void> _deleteQuiz(String id) async {
+    setState(() => _isDeleting = true);
+    try {
+      await QuizService.deleteQuiz(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Materi quiz dihapus'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Materi quiz gagal dihapus. Coba lagi sebentar.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isDeleting = false);
+    }
+  }
 }
 
 class _QuizCard extends StatelessWidget {
   final Quiz quiz;
+  final bool isDeleting;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _QuizCard({
     required this.quiz,
+    required this.isDeleting,
     required this.onEdit,
     required this.onDelete,
   });
@@ -177,7 +240,7 @@ class _QuizCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        StatusBadge(status: _statusKey(quiz.status)),
+                        StatusBadge(status: quizStatusToString(quiz.status)),
                       ],
                     ),
                     const SizedBox(height: 3),
@@ -212,7 +275,11 @@ class _QuizCard extends StatelessWidget {
             children: [
               InfoChip(
                 icon: Icons.person_outline_rounded,
-                label: quiz.targetStudentName,
+                label: quiz.studentName,
+              ),
+              InfoChip(
+                icon: Icons.school_outlined,
+                label: quiz.tutorName,
               ),
               InfoChip(
                 icon: Icons.speed_rounded,
@@ -231,7 +298,7 @@ class _QuizCard extends StatelessWidget {
             children: [
               Expanded(
                 child: EduButton(
-                  label: 'Edit Draft',
+                  label: 'Edit Materi',
                   icon: Icons.edit_outlined,
                   isPrimary: true,
                   onTap: onEdit,
@@ -239,7 +306,7 @@ class _QuizCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               IconButton(
-                onPressed: onDelete,
+                onPressed: isDeleting ? null : onDelete,
                 icon: const Icon(Icons.delete_outline_rounded),
                 color: Colors.grey.shade400,
                 visualDensity: VisualDensity.compact,
@@ -253,9 +320,15 @@ class _QuizCard extends StatelessWidget {
 }
 
 class _EmptyQuizState extends StatelessWidget {
-  final bool hasQuizzes;
+  final IconData icon;
+  final String title;
+  final String message;
 
-  const _EmptyQuizState({required this.hasQuizzes});
+  const _EmptyQuizState({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -272,22 +345,17 @@ class _EmptyQuizState extends StatelessWidget {
                 color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: const Icon(
-                Icons.quiz_outlined,
-                size: 28,
-                color: Colors.black38,
-              ),
+              child: Icon(icon, size: 28, color: Colors.black38),
             ),
             const SizedBox(height: 12),
             Text(
-              hasQuizzes ? 'Quiz tidak ditemukan' : 'Belum ada quiz draft',
+              title,
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 5),
             Text(
-              hasQuizzes
-                  ? 'Coba gunakan kata kunci lain.'
-                  : 'Buat quiz draft pertama dari tombol tambah.',
+              message,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13,
@@ -299,17 +367,6 @@ class _EmptyQuizState extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-String _statusKey(QuizStatus status) {
-  switch (status) {
-    case QuizStatus.draft:
-      return 'draft';
-    case QuizStatus.assigned:
-      return 'assigned';
-    case QuizStatus.completed:
-      return 'completed';
   }
 }
 

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../models/quiz_model.dart';
 import '../models/user_model.dart';
+import '../services/quiz_service.dart';
+import 'common_widgets.dart';
 
 class CreateQuizSheet extends StatefulWidget {
   final AppUser currentUser;
   final Quiz? quiz;
-  final ValueChanged<Quiz> onSaved;
 
   const CreateQuizSheet({
     super.key,
     required this.currentUser,
-    required this.onSaved,
     this.quiz,
   });
 
@@ -23,9 +23,10 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleCtrl;
   late final TextEditingController _topicCtrl;
-  late final TextEditingController _targetStudentCtrl;
   late final TextEditingController _materialCtrl;
   late QuizDifficulty _difficulty;
+  QuizBookingSession? _selectedSession;
+  bool _isSaving = false;
 
   bool get _isEditing => widget.quiz != null;
 
@@ -35,9 +36,6 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
     final quiz = widget.quiz;
     _titleCtrl = TextEditingController(text: quiz?.title ?? '');
     _topicCtrl = TextEditingController(text: quiz?.topic ?? '');
-    _targetStudentCtrl = TextEditingController(
-      text: quiz?.targetStudentName ?? '',
-    );
     _materialCtrl = TextEditingController(text: quiz?.materialText ?? '');
     _difficulty = quiz?.difficulty ?? QuizDifficulty.beginner;
   }
@@ -46,7 +44,6 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
   void dispose() {
     _titleCtrl.dispose();
     _topicCtrl.dispose();
-    _targetStudentCtrl.dispose();
     _materialCtrl.dispose();
     super.dispose();
   }
@@ -86,7 +83,7 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  _isEditing ? 'Edit Quiz Draft' : 'Buat Quiz Draft',
+                  _isEditing ? 'Edit Materi Quiz' : 'Buat Materi Quiz',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -94,7 +91,7 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
                 ),
                 const SizedBox(height: 5),
                 const Text(
-                  'Simpan materi dan detail quiz. Pertanyaan AI akan ditambahkan di minggu berikutnya.',
+                  'Pilih sesi tutor, lalu simpan materi teks untuk siswa.',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.black54,
@@ -102,6 +99,12 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
                   ),
                 ),
                 const SizedBox(height: 18),
+                _label('Sesi siswa'),
+                const SizedBox(height: 6),
+                _isEditing
+                    ? _LockedSessionBox(quiz: widget.quiz!)
+                    : _sessionPicker(),
+                const SizedBox(height: 14),
                 _label('Judul quiz'),
                 const SizedBox(height: 6),
                 _field(
@@ -115,14 +118,6 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
                 _field(
                   controller: _topicCtrl,
                   hint: 'cth: Matematika - Kalkulus',
-                  validator: _required,
-                ),
-                const SizedBox(height: 14),
-                _label('Siswa target'),
-                const SizedBox(height: 6),
-                _field(
-                  controller: _targetStudentCtrl,
-                  hint: 'cth: Sinta Rahayu',
                   validator: _required,
                 ),
                 const SizedBox(height: 14),
@@ -145,21 +140,33 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _submit,
+                    onPressed: _isSaving ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black87,
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.black26,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(11),
                       ),
                     ),
-                    icon: Icon(
-                      _isEditing ? Icons.check_rounded : Icons.add_rounded,
-                    ),
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Icon(
+                            _isEditing
+                                ? Icons.check_rounded
+                                : Icons.add_rounded,
+                          ),
                     label: Text(
-                      _isEditing ? 'Simpan Perubahan' : 'Buat Draft',
+                      _isEditing ? 'Simpan Perubahan' : 'Assign Materi',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
@@ -175,6 +182,58 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
     );
   }
 
+  Widget _sessionPicker() {
+    return StreamBuilder<List<QuizBookingSession>>(
+      stream: QuizService.tutorBookedSessions(widget.currentUser.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _BoxMessage(
+            icon: Icons.sync_rounded,
+            text: 'Memuat sesi booking...',
+          );
+        }
+
+        if (snapshot.hasError) {
+          return const _BoxMessage(
+            icon: Icons.cloud_off_outlined,
+            text: 'Sesi booking belum bisa dimuat.',
+          );
+        }
+
+        final sessions = snapshot.data ?? [];
+        if (sessions.isEmpty) {
+          return const _BoxMessage(
+            icon: Icons.event_busy_rounded,
+            text: 'Belum ada booking aktif untuk dibuatkan materi.',
+          );
+        }
+
+        return DropdownButtonFormField<String>(
+          initialValue: _selectedSession?.id,
+          isExpanded: true,
+          validator: (value) =>
+              value == null ? 'Pilih sesi siswa terlebih dulu' : null,
+          decoration: _inputDeco('Pilih sesi booking'),
+          items: sessions.map((session) {
+            return DropdownMenuItem(
+              value: session.id,
+              child: Text(
+                '${session.studentName} - ${session.subject}',
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: (id) {
+            setState(() {
+              _selectedSession =
+                  sessions.firstWhere((session) => session.id == id);
+            });
+          },
+        );
+      },
+    );
+  }
+
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Field ini wajib diisi';
@@ -182,32 +241,68 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
     return null;
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_isEditing && _selectedSession == null) return;
 
-    final saved =
-        (widget.quiz ??
-                Quiz(
-                  id: 'quiz-${DateTime.now().microsecondsSinceEpoch}',
-                  tutorId: widget.currentUser.id,
-                  title: '',
-                  topic: '',
-                  targetStudentName: '',
-                  difficulty: _difficulty,
-                  materialText: '',
-                  status: QuizStatus.draft,
-                  createdAt: DateTime.now(),
-                ))
-            .copyWith(
-              title: _titleCtrl.text.trim(),
-              topic: _topicCtrl.text.trim(),
-              targetStudentName: _targetStudentCtrl.text.trim(),
+    setState(() => _isSaving = true);
+
+    final now = DateTime.now();
+    final existing = widget.quiz;
+    final session = _selectedSession;
+    final saved = (existing ??
+            Quiz(
+              id: '',
+              bookingId: session!.id,
+              tutorSessionId: session.tutorSessionId,
+              studentId: session.studentId,
+              studentName: session.studentName,
+              tutorId: session.tutorId,
+              tutorName: session.tutorName,
+              title: '',
+              topic: '',
+              targetStudentName: session.studentName,
               difficulty: _difficulty,
-              materialText: _materialCtrl.text.trim(),
-            );
+              materialText: '',
+              status: QuizStatus.assigned,
+              createdAt: now,
+              updatedAt: now,
+            ))
+        .copyWith(
+      title: _titleCtrl.text.trim(),
+      topic: _topicCtrl.text.trim(),
+      targetStudentName: existing?.studentName ?? session?.studentName,
+      difficulty: _difficulty,
+      materialText: _materialCtrl.text.trim(),
+      status: QuizStatus.assigned,
+      updatedAt: now,
+    );
 
-    widget.onSaved(saved);
-    Navigator.pop(context);
+    try {
+      await QuizService.saveQuiz(saved);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isEditing
+                ? 'Materi quiz berhasil diperbarui'
+                : 'Materi quiz berhasil di-assign',
+          ),
+          backgroundColor: const Color(0xFF085041),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Materi quiz gagal disimpan. Coba lagi sebentar.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      setState(() => _isSaving = false);
+    }
   }
 
   Widget _label(String text) {
@@ -231,27 +326,91 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
       controller: controller,
       maxLines: maxLines,
       validator: validator,
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.black38, fontSize: 13),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 12,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(11),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(11),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(11),
-          borderSide: const BorderSide(color: Colors.black45),
-        ),
+      decoration: _inputDeco(hint),
+    );
+  }
+
+  InputDecoration _inputDeco(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Colors.black38, fontSize: 13),
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: const BorderSide(color: Colors.black45),
+      ),
+    );
+  }
+}
+
+class _LockedSessionBox extends StatelessWidget {
+  final Quiz quiz;
+
+  const _LockedSessionBox({required this.quiz});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.lock_outline_rounded,
+              size: 17, color: Colors.black45),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${quiz.studentName} - ${quiz.tutorName}',
+              style: const TextStyle(fontSize: 13, color: Colors.black87),
+            ),
+          ),
+          StatusBadge(status: quizStatusToString(quiz.status)),
+        ],
+      ),
+    );
+  }
+}
+
+class _BoxMessage extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _BoxMessage({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 17, color: Colors.black45),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+          ),
+        ],
       ),
     );
   }

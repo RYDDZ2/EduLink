@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/help_request_model.dart';
 import '../models/user_model.dart';
 import '../widgets/common_widgets.dart';
@@ -7,8 +8,9 @@ class HelpRequestsTab extends StatefulWidget {
   final List<HelpRequest> requests;
   final AppUser currentUser;
   final bool canOfferHelp;
-  final Function(String id) onOfferHelp;
-  final Function(String id) onDelete;
+  final Future<void> Function(HelpRequest request) onOfferHelp;
+  final Future<void> Function(String id) onDelete;
+  final ValueChanged<HelpRequest> onOpenDetail;
 
   const HelpRequestsTab({
     super.key,
@@ -17,6 +19,7 @@ class HelpRequestsTab extends StatefulWidget {
     required this.canOfferHelp,
     required this.onOfferHelp,
     required this.onDelete,
+    required this.onOpenDetail,
   });
 
   @override
@@ -35,39 +38,35 @@ class _HelpRequestsTabState extends State<HelpRequestsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = widget.requests.where((r) {
+    final filtered = widget.requests.where((request) {
       if (_searchQuery.isEmpty) return true;
       final q = _searchQuery.toLowerCase();
-      return r.title.toLowerCase().contains(q) ||
-          r.tags.any((t) => t.toLowerCase().contains(q));
+      return request.title.toLowerCase().contains(q) ||
+          request.tags.any((tag) => tag.toLowerCase().contains(q));
     }).toList();
 
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  onChanged: (v) => setState(() => _searchQuery = v),
-                  decoration: InputDecoration(
-                    hintText: 'Cari topik atau mata pelajaran...',
-                    hintStyle:
-                        const TextStyle(fontSize: 13, color: Colors.black38),
-                    prefixIcon: const Icon(Icons.search_rounded,
-                        size: 20, color: Colors.black38),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
+          child: TextField(
+            onChanged: (value) => setState(() => _searchQuery = value),
+            decoration: InputDecoration(
+              hintText: 'Cari topik atau mata pelajaran...',
+              hintStyle: const TextStyle(fontSize: 13, color: Colors.black38),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                size: 20,
+                color: Colors.black38,
               ),
-            ],
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -83,15 +82,19 @@ class _HelpRequestsTabState extends State<HelpRequestsTab> {
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                   itemCount: filtered.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (_, i) => _RequestCard(
-                    request: filtered[i],
-                    timeAgo: _timeAgo(filtered[i].createdAt),
-                    canOfferHelp: widget.canOfferHelp &&
-                        filtered[i].userId != widget.currentUser.id,
-                    canDelete: filtered[i].userId == widget.currentUser.id,
-                    onOfferHelp: () => widget.onOfferHelp(filtered[i].id),
-                    onDelete: () => widget.onDelete(filtered[i].id),
-                  ),
+                  itemBuilder: (_, index) {
+                    final request = filtered[index];
+                    return _RequestCard(
+                      request: request,
+                      timeAgo: _timeAgo(request.createdAt),
+                      canOfferHelp: widget.canOfferHelp &&
+                          request.userId != widget.currentUser.id,
+                      canDelete: request.userId == widget.currentUser.id,
+                      onTap: () => widget.onOpenDetail(request),
+                      onOfferHelp: () => widget.onOfferHelp(request),
+                      onDelete: () => widget.onDelete(request.id),
+                    );
+                  },
                 ),
         ),
       ],
@@ -104,6 +107,7 @@ class _RequestCard extends StatelessWidget {
   final String timeAgo;
   final bool canOfferHelp;
   final bool canDelete;
+  final VoidCallback onTap;
   final VoidCallback onOfferHelp;
   final VoidCallback onDelete;
 
@@ -112,146 +116,153 @@ class _RequestCard extends StatelessWidget {
     required this.timeAgo,
     required this.canOfferHelp,
     required this.canDelete,
+    required this.onTap,
     required this.onOfferHelp,
     required this.onDelete,
   });
 
-  String get _statusKey {
-    switch (request.status) {
-      case RequestStatus.open:
-        return 'open';
-      case RequestStatus.pending:
-        return 'pending';
-      case RequestStatus.confirmed:
-        return 'confirmed';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AvatarWidget(
-                initials: request.userInitials,
-                bgColorHex: request.userAvatarColor,
-                size: 38,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            request.title,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              height: 1.3,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        StatusBadge(status: _statusKey),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${request.userName} · $timeAgo',
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.black45),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (request.description.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              request.description,
-              style: const TextStyle(
-                  fontSize: 13, color: Colors.black54, height: 1.4),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 5,
-                  runSpacing: 5,
-                  children: request.tags.map((t) => TagChip(label: t)).toList(),
-                ),
-              ),
-              KpBadge(label: '+${request.knowledgePoints} KP'),
-            ],
-          ),
-          if (request.availableTime != null) ...[
-            const SizedBox(height: 6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.access_time_rounded,
-                    size: 13, color: Colors.black38),
-                const SizedBox(width: 4),
-                Text(
-                  request.availableTime!,
-                  style: const TextStyle(fontSize: 12, color: Colors.black45),
+                AvatarWidget(
+                  initials: request.userInitials,
+                  bgColorHex: request.userAvatarColor,
+                  size: 38,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              request.title,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          StatusBadge(status: request.statusKey),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${request.userName} - $timeAgo',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black45,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ],
-          if (request.status == RequestStatus.open &&
-              (canOfferHelp || canDelete)) ...[
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            if (request.description.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                request.description,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black54,
+                  height: 1.4,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
             const SizedBox(height: 10),
             Row(
               children: [
-                if (canOfferHelp)
-                  Expanded(
-                    child: EduButton(
-                      label: 'Tawarkan Bantuan',
-                      icon: Icons.handshake_outlined,
-                      isPrimary: true,
-                      onTap: onOfferHelp,
-                    ),
+                Expanded(
+                  child: Wrap(
+                    spacing: 5,
+                    runSpacing: 5,
+                    children:
+                        request.tags.map((tag) => TagChip(label: tag)).toList(),
                   ),
-                if (canOfferHelp && canDelete) const SizedBox(width: 8),
-                if (canDelete)
-                  IconButton(
-                    onPressed: () => _confirmDelete(context),
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    color: Colors.grey.shade400,
-                    visualDensity: VisualDensity.compact,
-                  ),
+                ),
+                KpBadge(label: '+${request.knowledgePoints} KP'),
               ],
             ),
+            if (request.availableTime != null &&
+                request.availableTime!.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.access_time_rounded,
+                    size: 13,
+                    color: Colors.black38,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    request.availableTime!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black45,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (request.status == RequestStatus.open &&
+                (canOfferHelp || canDelete)) ...[
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Color(0xFFF0F0F0)),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  if (canOfferHelp)
+                    Expanded(
+                      child: EduButton(
+                        label: 'Tawarkan Bantuan',
+                        icon: Icons.handshake_outlined,
+                        isPrimary: true,
+                        onTap: onOfferHelp,
+                      ),
+                    ),
+                  if (canOfferHelp && canDelete) const SizedBox(width: 8),
+                  if (canDelete)
+                    IconButton(
+                      onPressed: () => _confirmDelete(context),
+                      icon: const Icon(Icons.delete_outline_rounded),
+                      color: Colors.grey.shade400,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

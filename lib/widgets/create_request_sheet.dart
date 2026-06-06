@@ -5,7 +5,7 @@ import '../widgets/common_widgets.dart';
 
 class CreateRequestSheet extends StatefulWidget {
   final AppUser currentUser;
-  final Function(HelpRequest) onCreated;
+  final Future<void> Function(HelpRequest) onCreated;
 
   const CreateRequestSheet({
     super.key,
@@ -23,6 +23,7 @@ class _CreateRequestSheetState extends State<CreateRequestSheet> {
   final _timeCtrl = TextEditingController();
   final _kpCtrl = TextEditingController(text: '40');
   final List<String> _selectedTags = [];
+  bool _isSaving = false;
   final List<String> _availableTags = [
     'Matematika',
     'Fisika',
@@ -37,6 +38,15 @@ class _CreateRequestSheetState extends State<CreateRequestSheet> {
     'Essay',
     'Kalkulus',
   ];
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    _timeCtrl.dispose();
+    _kpCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +155,7 @@ class _CreateRequestSheetState extends State<CreateRequestSheet> {
                   child: EduButton(
                     label: 'Buat Permintaan',
                     isPrimary: true,
-                    onTap: _submit,
+                    onTap: _isSaving ? () {} : _submit,
                   ),
                 ),
               ],
@@ -156,13 +166,14 @@ class _CreateRequestSheetState extends State<CreateRequestSheet> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_titleCtrl.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Judul tidak boleh kosong')),
       );
       return;
     }
+    setState(() => _isSaving = true);
     final newRequest = HelpRequest(
       id: 'req-${DateTime.now().millisecondsSinceEpoch}',
       userId: widget.currentUser.id,
@@ -177,8 +188,12 @@ class _CreateRequestSheetState extends State<CreateRequestSheet> {
       createdAt: DateTime.now(),
       availableTime: _timeCtrl.text,
     );
-    widget.onCreated(newRequest);
-    Navigator.pop(context);
+    try {
+      await widget.onCreated(newRequest);
+      if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   Widget _label(String text) => Text(

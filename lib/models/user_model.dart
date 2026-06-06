@@ -25,7 +25,8 @@ class AppUser {
   String get roleLabel => role == UserRole.student ? 'Student' : 'Tutor';
 
   static UserRole roleFromString(String value) {
-    return value == 'tutor' || value == 'teacher'
+    final normalized = value.trim().toLowerCase();
+    return normalized == 'tutor' || normalized == 'teacher'
         ? UserRole.tutor
         : UserRole.student;
   }

@@ -25,20 +25,20 @@ class AppTheme {
   }
 
   static ThemeData get light => ThemeData(
-    useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFF2563EB),
-      brightness: Brightness.light,
-    ),
-    fontFamily: 'SF Pro Display',
-    appBarTheme: const AppBarTheme(
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      backgroundColor: Color(0xFFF8F9FA),
-      surfaceTintColor: Colors.transparent,
-    ),
-    scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-  );
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2563EB),
+          brightness: Brightness.light,
+        ),
+        fontFamily: 'SF Pro Display',
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          backgroundColor: Color(0xFFF8F9FA),
+          surfaceTintColor: Colors.transparent,
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+      );
 
   // Status colors
   static Color statusBg(String status) {
@@ -50,10 +50,14 @@ class AppTheme {
       case 'assigned':
         return const Color(0xFFFAEEDA);
       case 'confirmed':
+      case 'accepted':
+      case 'active':
         return const Color(0xFFE1F5EE);
       case 'completed':
+      case 'ended':
         return const Color(0xFFEAF3DE);
       case 'cancelled':
+      case 'declined':
         return const Color(0xFFFFEBEB);
       default:
         return const Color(0xFFF1EFE8);
@@ -69,10 +73,14 @@ class AppTheme {
       case 'assigned':
         return const Color(0xFF633806);
       case 'confirmed':
+      case 'accepted':
+      case 'active':
         return const Color(0xFF085041);
       case 'completed':
+      case 'ended':
         return const Color(0xFF27500A);
       case 'cancelled':
+      case 'declined':
         return const Color(0xFF791F1F);
       default:
         return const Color(0xFF444441);
@@ -91,10 +99,18 @@ class AppTheme {
         return 'Assigned';
       case 'confirmed':
         return 'Confirmed';
+      case 'accepted':
+        return 'Diterima';
+      case 'active':
+        return 'Aktif';
       case 'completed':
         return 'Selesai';
+      case 'ended':
+        return 'Berakhir';
       case 'cancelled':
         return 'Dibatalkan';
+      case 'declined':
+        return 'Ditolak';
       default:
         return status;
     }

@@ -6,7 +6,7 @@ import 'common_widgets.dart';
 
 class CreateTutorSessionSheet extends StatefulWidget {
   final AppUser currentUser;
-  final Function(TutorSession) onCreated;
+  final Future<void> Function(TutorSession) onCreated;
 
   const CreateTutorSessionSheet({
     super.key,
@@ -24,7 +24,7 @@ class _CreateTutorSessionSheetState extends State<CreateTutorSessionSheet> {
   final _daysCtrl = TextEditingController(text: 'Senin-Jumat');
   final _timeCtrl = TextEditingController(text: '15.00-20.00');
   final _kpCtrl = TextEditingController(text: '60');
-  bool _availableNow = true;
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -111,17 +111,6 @@ class _CreateTutorSessionSheetState extends State<CreateTutorSessionSheet> {
             _label('Knowledge Points per jam'),
             const SizedBox(height: 6),
             _field(_kpCtrl, '60', keyboardType: TextInputType.number),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              value: _availableNow,
-              onChanged: (value) => setState(() => _availableNow = value),
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'Tersedia sekarang',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              activeThumbColor: Colors.black87,
-            ),
             const SizedBox(height: 18),
             Row(
               children: [
@@ -136,7 +125,7 @@ class _CreateTutorSessionSheetState extends State<CreateTutorSessionSheet> {
                   child: EduButton(
                     label: 'Daftarkan',
                     isPrimary: true,
-                    onTap: _submit,
+                    onTap: _isSaving ? () {} : _submit,
                   ),
                 ),
               ],
@@ -147,7 +136,7 @@ class _CreateTutorSessionSheetState extends State<CreateTutorSessionSheet> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_subjectsCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Mata pelajaran tidak boleh kosong')),
@@ -161,22 +150,26 @@ class _CreateTutorSessionSheetState extends State<CreateTutorSessionSheet> {
         .where((subject) => subject.isNotEmpty)
         .toList();
 
-    widget.onCreated(
-      TutorSession(
-        id: 'tutor-${DateTime.now().millisecondsSinceEpoch}',
-        tutorId: widget.currentUser.id,
-        tutorName: widget.currentUser.name,
-        tutorInitials: widget.currentUser.initials,
-        tutorAvatarColor: '#E1F5EE',
-        subjects: subjects,
-        rating: 5,
-        reviewCount: 0,
-        kpPerHour: int.tryParse(_kpCtrl.text) ?? 60,
-        availability: [_daysCtrl.text, _timeCtrl.text],
-        isAvailableNow: _availableNow,
-      ),
+    setState(() => _isSaving = true);
+    final session = TutorSession(
+      id: 'new',
+      tutorId: widget.currentUser.id,
+      tutorName: widget.currentUser.name,
+      tutorInitials: widget.currentUser.initials,
+      tutorAvatarColor: '#E1F5EE',
+      subjects: subjects,
+      rating: 5,
+      reviewCount: 0,
+      kpPerHour: int.tryParse(_kpCtrl.text) ?? 60,
+      availability: [_daysCtrl.text, _timeCtrl.text],
+      isAvailableNow: false,
     );
-    Navigator.pop(context);
+    try {
+      await widget.onCreated(session);
+      if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   Widget _label(String text) => Text(

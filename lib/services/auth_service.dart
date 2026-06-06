@@ -34,12 +34,14 @@ class AuthService {
           '[AuthService] Profile doc not found for uid=${user.uid} attempt=$attempt/$_profileMaxAttempts',
         );
 
-        final fallbackProfile = _fallbackProfileFromAuth(user);
-        await docRef.set({
-          ...fallbackProfile.toMap(),
-          'createdAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-        return fallbackProfile;
+        if (attempt == _profileMaxAttempts) {
+          final fallbackProfile = _fallbackProfileFromAuth(user);
+          await docRef.set({
+            ...fallbackProfile.toMap(),
+            'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          return fallbackProfile;
+        }
       } on FirebaseException catch (e) {
         debugPrint(
           '[AuthService] Failed to read profile uid=${user.uid} attempt=$attempt/$_profileMaxAttempts code=${e.code} message=${e.message}',
@@ -51,7 +53,9 @@ class AuthService {
         debugPrint(
           '[AuthService] Unknown error reading profile uid=${user.uid} attempt=$attempt/$_profileMaxAttempts: $e',
         );
-        if (attempt == _profileMaxAttempts) return _fallbackProfileFromAuth(user);
+        if (attempt == _profileMaxAttempts) {
+          return _fallbackProfileFromAuth(user);
+        }
       }
 
       if (attempt < _profileMaxAttempts) {
@@ -74,7 +78,9 @@ class AuthService {
 
     return AppUser(
       id: user.uid,
-      name: displayName == null || displayName.isEmpty ? 'EduLink User' : displayName,
+      name: displayName == null || displayName.isEmpty
+          ? 'EduLink User'
+          : displayName,
       email: email,
       role: UserRole.student,
       knowledgePoints: 320,

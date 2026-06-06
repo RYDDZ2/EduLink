@@ -9,6 +9,7 @@ class HelpRequestsTab extends StatefulWidget {
   final AppUser currentUser;
   final bool canOfferHelp;
   final Future<void> Function(HelpRequest request) onOfferHelp;
+  final Future<void> Function(HelpRequest request) onEdit;
   final Future<void> Function(String id) onDelete;
   final ValueChanged<HelpRequest> onOpenDetail;
 
@@ -18,6 +19,7 @@ class HelpRequestsTab extends StatefulWidget {
     required this.currentUser,
     required this.canOfferHelp,
     required this.onOfferHelp,
+    required this.onEdit,
     required this.onDelete,
     required this.onOpenDetail,
   });
@@ -89,9 +91,11 @@ class _HelpRequestsTabState extends State<HelpRequestsTab> {
                       timeAgo: _timeAgo(request.createdAt),
                       canOfferHelp: widget.canOfferHelp &&
                           request.userId != widget.currentUser.id,
+                      canEdit: request.userId == widget.currentUser.id,
                       canDelete: request.userId == widget.currentUser.id,
                       onTap: () => widget.onOpenDetail(request),
                       onOfferHelp: () => widget.onOfferHelp(request),
+                      onEdit: () => widget.onEdit(request),
                       onDelete: () => widget.onDelete(request.id),
                     );
                   },
@@ -106,18 +110,22 @@ class _RequestCard extends StatelessWidget {
   final HelpRequest request;
   final String timeAgo;
   final bool canOfferHelp;
+  final bool canEdit;
   final bool canDelete;
   final VoidCallback onTap;
   final VoidCallback onOfferHelp;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _RequestCard({
     required this.request,
     required this.timeAgo,
     required this.canOfferHelp,
+    required this.canEdit,
     required this.canDelete,
     required this.onTap,
     required this.onOfferHelp,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -251,6 +259,13 @@ class _RequestCard extends StatelessWidget {
                       ),
                     ),
                   if (canOfferHelp && canDelete) const SizedBox(width: 8),
+                  if (canEdit)
+                    IconButton(
+                      onPressed: onEdit,
+                      icon: const Icon(Icons.edit_outlined),
+                      color: Colors.grey.shade400,
+                      visualDensity: VisualDensity.compact,
+                    ),
                   if (canDelete)
                     IconButton(
                       onPressed: () => _confirmDelete(context),

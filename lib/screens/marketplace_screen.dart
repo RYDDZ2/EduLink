@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/help_request_model.dart';
+import '../models/marketplace_models.dart';
 import '../models/tutor_session_model.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
@@ -8,6 +9,8 @@ import '../services/marketplace_service.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/create_request_sheet.dart';
 import '../widgets/create_tutor_session_sheet.dart';
+import '../widgets/edit_request_sheet.dart';
+import '../widgets/edit_tutor_session_sheet.dart';
 import 'help_requests_tab.dart';
 import 'marketplace_activity_tab.dart';
 import 'marketplace_inbox_tab.dart';
@@ -45,60 +48,79 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<HelpRequest>>(
-      stream: MarketplaceService.helpRequests(),
-      builder: (context, requestSnapshot) {
-        final requests = requestSnapshot.data ?? const <HelpRequest>[];
+    return StreamBuilder<List<TutoringSession>>(
+      stream: MarketplaceService.tutoringSessionsForUser(widget.currentUser.id),
+      builder: (context, sessionSnapshot) {
+        final myTutoringSessions =
+            sessionSnapshot.data ?? const <TutoringSession>[];
 
-        return StreamBuilder<List<TutorSession>>(
-          stream: MarketplaceService.tutorSessions(),
-          builder: (context, tutorSnapshot) {
-            final tutors = tutorSnapshot.data ?? const <TutorSession>[];
-            return Scaffold(
-              backgroundColor: const Color(0xFFF8F9FA),
-              appBar: _MarketplaceAppBar(currentUser: widget.currentUser),
-              body: Column(
-                children: [
-                  _StatsRow(
-                    requests: requests,
-                    tutors: tutors,
-                    currentUser: widget.currentUser,
-                  ),
-                  const SizedBox(height: 12),
-                  _SegmentedTabs(
-                    controller: _tabController,
-                    tabs: const [
-                      Tab(text: 'Permintaan'),
-                      Tab(text: 'Tutor'),
-                      Tab(text: 'Inbox'),
-                      Tab(text: 'Aktivitas'),
+        return StreamBuilder<List<HelpRequest>>(
+          stream: MarketplaceService.helpRequests(),
+          builder: (context, requestSnapshot) {
+            final requests = requestSnapshot.data ?? const <HelpRequest>[];
+
+            return StreamBuilder<List<TutorSession>>(
+              stream: MarketplaceService.tutorSessions(),
+              builder: (context, tutorSnapshot) {
+                final tutors = tutorSnapshot.data ?? const <TutorSession>[];
+                final hasTutorSession = tutors.any(
+                  (session) => session.tutorId == widget.currentUser.id,
+                );
+                return Scaffold(
+                  backgroundColor: const Color(0xFFF8F9FA),
+                  appBar: _MarketplaceAppBar(currentUser: widget.currentUser),
+                  body: Column(
+                    children: [
+                      _StatsRow(
+                        requests: requests,
+                        tutors: tutors,
+                        currentUser: widget.currentUser,
+                        myTutoringSessions: myTutoringSessions,
+                      ),
+                      const SizedBox(height: 12),
+                      _SegmentedTabs(
+                        controller: _tabController,
+                        tabs: const [
+                          Tab(text: 'Permintaan'),
+                          Tab(text: 'Tutor'),
+                          Tab(text: 'Inbox'),
+                          Tab(text: 'Aktivitas'),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            HelpRequestsTab(
+                              requests: requests,
+                              currentUser: widget.currentUser,
+                              canOfferHelp: _isTutor,
+                              onOfferHelp: _offerHelp,
+                              onEdit: _editRequest,
+                              onDelete: _deleteRequest,
+                              onOpenDetail: _openRequestDetail,
+                            ),
+                            TutorsTab(
+                              tutors: tutors,
+                              currentUser: widget.currentUser,
+                              onEditTutorSession: _editTutorSession,
+                              onDeleteTutorSession: _deleteTutorSession,
+                            ),
+                            MarketplaceInboxTab(
+                                currentUser: widget.currentUser),
+                            MarketplaceActivityTab(
+                                currentUser: widget.currentUser),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        HelpRequestsTab(
-                          requests: requests,
-                          currentUser: widget.currentUser,
-                          canOfferHelp: _isTutor,
-                          onOfferHelp: _offerHelp,
-                          onDelete: _deleteRequest,
-                          onOpenDetail: _openRequestDetail,
-                        ),
-                        TutorsTab(
-                          tutors: tutors,
-                          currentUser: widget.currentUser,
-                        ),
-                        MarketplaceInboxTab(currentUser: widget.currentUser),
-                        MarketplaceActivityTab(currentUser: widget.currentUser),
-                      ],
-                    ),
+                  floatingActionButton: _floatingActionButton(
+                    hasTutorSession: hasTutorSession,
                   ),
-                ],
-              ),
-              floatingActionButton: _floatingActionButton(),
+                );
+              },
             );
           },
         );
@@ -106,7 +128,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
     );
   }
 
-  Widget? _floatingActionButton() {
+  Widget? _floatingActionButton({required bool hasTutorSession}) {
     if (_tabController.index == 0 && _isStudent) {
       return FloatingActionButton.extended(
         onPressed: _showCreateRequestSheet,
@@ -120,7 +142,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
       );
     }
 
-    if (_tabController.index == 1 && _isTutor) {
+    if (_tabController.index == 1 && _isTutor && !hasTutorSession) {
       return FloatingActionButton.extended(
         onPressed: _showCreateTutorSheet,
         backgroundColor: Colors.black87,
@@ -146,6 +168,24 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
       const SnackBar(
         content: Text('Penawaran bantuan dikirim ke inbox student.'),
         behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _editRequest(HelpRequest request) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => EditRequestSheet(
+        request: request,
+        onUpdated: (updated) async {
+          await MarketplaceService.updateHelpRequest(updated);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Permintaan diperbarui.')),
+          );
+        },
       ),
     );
   }
@@ -182,6 +222,32 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
         currentUser: widget.currentUser,
         onCreated: MarketplaceService.createHelpRequest,
       ),
+    );
+  }
+
+  Future<void> _editTutorSession(TutorSession session) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => EditTutorSessionSheet(
+        session: session,
+        onUpdated: (updated) async {
+          await MarketplaceService.updateTutorSession(updated);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sesi tutor diperbarui.')),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _deleteTutorSession(String id) async {
+    await MarketplaceService.deleteTutorSession(id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sesi tutor dihapus.')),
     );
   }
 
@@ -295,28 +361,40 @@ class _StatsRow extends StatelessWidget {
   final List<HelpRequest> requests;
   final List<TutorSession> tutors;
   final AppUser currentUser;
+  final List<TutoringSession> myTutoringSessions;
 
   const _StatsRow({
     required this.requests,
     required this.tutors,
     required this.currentUser,
+    required this.myTutoringSessions,
   });
 
   @override
   Widget build(BuildContext context) {
+    final myOpenRequests = requests
+        .where((request) =>
+            request.userId == currentUser.id &&
+            request.status == RequestStatus.open)
+        .length;
     final openRequests = requests
         .where((request) => request.status == RequestStatus.open)
         .length;
     final myTutorSessions =
         tutors.where((session) => session.tutorId == currentUser.id).length;
+    final myActivityCount = myTutoringSessions.length;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
       child: Row(
         children: [
           _StatCard(
-            label: 'Permintaan Buka',
-            value: openRequests.toString(),
+            label: currentUser.role == UserRole.student
+                ? 'Permintaanku'
+                : 'Permintaan Buka',
+            value: currentUser.role == UserRole.student
+                ? myOpenRequests.toString()
+                : openRequests.toString(),
             color: const Color(0xFFE6F1FB),
             textColor: const Color(0xFF0C447C),
           ),
@@ -332,8 +410,9 @@ class _StatsRow extends StatelessWidget {
             label: currentUser.role == UserRole.tutor
                 ? 'Sesi Terdaftar'
                 : 'Aktivitas',
-            value:
-                currentUser.role == UserRole.tutor ? '$myTutorSessions' : '-',
+            value: currentUser.role == UserRole.tutor
+                ? '$myTutorSessions'
+                : '$myActivityCount',
             color: const Color(0xFFFAEEDA),
             textColor: const Color(0xFF633806),
           ),

@@ -25,6 +25,13 @@ class _TutorProfileScreenState extends State<TutorProfileScreen> {
   int _selectedRating = 0;
   bool _isRating = false;
 
+  String _formatMinutesToTime(int minutes) {
+    final h = (minutes ~/ 60).toString().padLeft(2, '0');
+    final m = (minutes % 60).toString().padLeft(2, '0');
+    return '$h.$m';
+  }
+
+
   bool get _canBook =>
       widget.currentUser.role == UserRole.student &&
       widget.currentUser.id != widget.tutor.tutorId;
@@ -106,7 +113,8 @@ class _TutorProfileScreenState extends State<TutorProfileScreen> {
                       ),
                     ),
                     const Spacer(),
-                    KpBadge(label: '${tutor.kpPerHour} KP/jam'),
+                    KpBadge(label: '${tutor.kp} KP'),
+
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -114,16 +122,19 @@ class _TutorProfileScreenState extends State<TutorProfileScreen> {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    if (tutor.availability.isNotEmpty)
+                    if (tutor.daysAvailability.isNotEmpty)
                       InfoChip(
                         icon: Icons.calendar_month_outlined,
-                        label: tutor.availability.first,
+                        label: tutor.daysAvailability.first,
                       ),
-                    if (tutor.availability.length > 1)
+                    if (tutor.timeAvailabilityMinutes.isNotEmpty)
                       InfoChip(
                         icon: Icons.access_time_rounded,
-                        label: tutor.availability[1],
+                        label: tutor.timeAvailabilityMinutes.length >= 2
+                            ? '${_formatMinutesToTime(tutor.timeAvailabilityMinutes[0])}–${_formatMinutesToTime(tutor.timeAvailabilityMinutes[1])}'
+                            : _formatMinutesToTime(tutor.timeAvailabilityMinutes.first),
                       ),
+
                   ],
                 ),
               ],

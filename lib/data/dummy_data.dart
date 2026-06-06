@@ -76,8 +76,10 @@ class DummyData {
       subjects: ['Fisika', 'Matematika'],
       rating: 4.9,
       reviewCount: 47,
-      kpPerHour: 80,
-      availability: ['Senin–Jumat', '15.00–20.00'],
+      kp: 80,
+      daysAvailability: ['Senin–Jumat'],
+      timeAvailabilityMinutes: [15 * 60, 20 * 60],
+
       isAvailableNow: true,
     ),
     TutorSession(
@@ -89,9 +91,11 @@ class DummyData {
       subjects: ['Kimia', 'Biologi'],
       rating: 4.7,
       reviewCount: 32,
-      kpPerHour: 60,
-      availability: ['Selasa–Sabtu', '16.00–21.00'],
+      kp: 60,
+      daysAvailability: ['Selasa–Sabtu'],
+      timeAvailabilityMinutes: [16 * 60, 21 * 60],
       isAvailableNow: false,
+
     ),
     TutorSession(
       id: 'tutor-003',
@@ -102,8 +106,10 @@ class DummyData {
       subjects: ['Pemrograman', 'Algoritma'],
       rating: 4.8,
       reviewCount: 61,
-      kpPerHour: 70,
-      availability: ['Setiap hari', '18.00–22.00'],
+      kp: 70,
+      daysAvailability: ['Setiap hari'],
+      timeAvailabilityMinutes: [18 * 60, 22 * 60],
+
       isAvailableNow: true,
     ),
     TutorSession(
@@ -115,8 +121,10 @@ class DummyData {
       subjects: ['Bahasa Inggris', 'Bahasa Indonesia'],
       rating: 4.6,
       reviewCount: 28,
-      kpPerHour: 50,
-      availability: ['Senin, Rabu, Jumat', '14.00–19.00'],
+      kp: 50,
+      daysAvailability: ['Senin, Rabu, Jumat'],
+      timeAvailabilityMinutes: [14 * 60, 19 * 60],
+
       isAvailableNow: false,
     ),
   ];

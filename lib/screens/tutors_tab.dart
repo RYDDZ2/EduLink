@@ -8,11 +8,15 @@ import 'tutor_profile_screen.dart';
 class TutorsTab extends StatelessWidget {
   final List<TutorSession> tutors;
   final AppUser currentUser;
+  final Future<void> Function(TutorSession session) onEditTutorSession;
+  final Future<void> Function(String id) onDeleteTutorSession;
 
   const TutorsTab({
     super.key,
     required this.tutors,
     required this.currentUser,
+    required this.onEditTutorSession,
+    required this.onDeleteTutorSession,
   });
 
   @override
@@ -33,18 +37,30 @@ class TutorsTab extends StatelessWidget {
       itemBuilder: (_, index) => _TutorCard(
         tutor: tutors[index],
         currentUser: currentUser,
+        onEditTutorSession: onEditTutorSession,
+        onDeleteTutorSession: onDeleteTutorSession,
       ),
     );
   }
 }
 
 class _TutorCard extends StatelessWidget {
+  static String _formatMinutesToTime(int minutes) {
+    final h = (minutes ~/ 60).toString().padLeft(2, '0');
+    final m = (minutes % 60).toString().padLeft(2, '0');
+    return '$h.$m';
+  }
+
   final TutorSession tutor;
   final AppUser currentUser;
+  final Future<void> Function(TutorSession session) onEditTutorSession;
+  final Future<void> Function(String id) onDeleteTutorSession;
 
   const _TutorCard({
     required this.tutor,
     required this.currentUser,
+    required this.onEditTutorSession,
+    required this.onDeleteTutorSession,
   });
 
   @override
@@ -145,31 +161,69 @@ class _TutorCard extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               children: [
-                if (tutor.availability.isNotEmpty)
+                if (tutor.daysAvailability.isNotEmpty)
                   InfoChip(
                     icon: Icons.schedule_rounded,
-                    label: tutor.availability[0],
+                    label: tutor.daysAvailability[0],
                   ),
-                if (tutor.availability.length > 1)
+                if (tutor.timeAvailabilityMinutes.isNotEmpty)
                   InfoChip(
                     icon: Icons.access_time_rounded,
-                    label: tutor.availability[1],
+                    label: tutor.timeAvailabilityMinutes.length >= 2
+                        ? '${_formatMinutesToTime(tutor.timeAvailabilityMinutes[0])}–${_formatMinutesToTime(tutor.timeAvailabilityMinutes[1])}'
+                        : _formatMinutesToTime(
+                            tutor.timeAvailabilityMinutes.first),
                   ),
               ],
             ),
             const SizedBox(height: 10),
             Row(
               children: [
-                KpBadge(label: '${tutor.kpPerHour} KP/jam'),
+                KpBadge(label: '${tutor.kp} KP'),
                 const Spacer(),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.black38,
-                ),
+                if (tutor.tutorId == currentUser.id) ...[
+                  IconButton(
+                    onPressed: () => onEditTutorSession(tutor),
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    color: Colors.black45,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  IconButton(
+                    onPressed: () => _confirmDelete(context, tutor.id),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                    color: Colors.black45,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+                const Icon(Icons.chevron_right_rounded, color: Colors.black38),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, String id) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hapus sesi tutor?', style: TextStyle(fontSize: 16)),
+        content: const Text('Sesi tutor ini akan dihapus dari marketplace.',
+            style: TextStyle(fontSize: 13)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onDeleteTutorSession(id);
+            },
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }

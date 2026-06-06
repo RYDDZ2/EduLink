@@ -60,6 +60,12 @@ class TutorActivityTab extends StatelessWidget {
 }
 
 class _SessionCard extends StatelessWidget {
+  static String _formatMinutesToTime(int minutes) {
+    final h = (minutes ~/ 60).toString().padLeft(2, '0');
+    final m = (minutes % 60).toString().padLeft(2, '0');
+    return '$h.$m';
+  }
+
   final TutorSession session;
 
   const _SessionCard({required this.session});
@@ -88,7 +94,8 @@ class _SessionCard extends StatelessWidget {
                   ),
                 ),
               ),
-              KpBadge(label: '${session.kpPerHour} KP/jam'),
+              KpBadge(label: '${session.kp} KP'),
+
             ],
           ),
           const SizedBox(height: 8),
@@ -97,10 +104,16 @@ class _SessionCard extends StatelessWidget {
             runSpacing: 6,
             children: [
               InfoChip(
-                  icon: Icons.schedule_rounded, label: session.availability[0]),
+                  icon: Icons.schedule_rounded,
+                  label: session.daysAvailability.isNotEmpty
+                      ? session.daysAvailability.first
+                      : '-'),
               InfoChip(
                   icon: Icons.access_time_rounded,
-                  label: session.availability[1]),
+                  label: session.timeAvailabilityMinutes.length >= 2
+                      ? '${_formatMinutesToTime(session.timeAvailabilityMinutes[0])}–${_formatMinutesToTime(session.timeAvailabilityMinutes[1])}'
+                      : '-'),
+
               if (session.isAvailableNow)
                 const InfoChip(icon: Icons.circle, label: 'Online'),
             ],

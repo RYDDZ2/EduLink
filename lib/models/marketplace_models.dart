@@ -13,6 +13,7 @@ class HelpOffer {
   final String message;
   final String status;
   final DateTime createdAt;
+  final int kpOffered;
 
   const HelpOffer({
     required this.id,
@@ -27,6 +28,7 @@ class HelpOffer {
     required this.message,
     required this.status,
     required this.createdAt,
+    this.kpOffered = 40,
   });
 
   bool get isPending => status == 'pending';
@@ -46,6 +48,7 @@ class HelpOffer {
       message: data['message'] as String? ?? '',
       status: data['status'] as String? ?? 'pending',
       createdAt: created is Timestamp ? created.toDate() : DateTime.now(),
+      kpOffered: data['kpOffered'] as int? ?? 40,
     );
   }
 
@@ -78,6 +81,7 @@ class SessionBookingRequest {
   final DateTime scheduledAt;
   final int durationMinutes;
   final int kpCost;
+  final int tutorKp;
   final String notes;
   final String status;
   final DateTime createdAt;
@@ -94,6 +98,7 @@ class SessionBookingRequest {
     required this.scheduledAt,
     required this.durationMinutes,
     required this.kpCost,
+    required this.tutorKp,
     required this.notes,
     required this.status,
     required this.createdAt,
@@ -116,6 +121,7 @@ class SessionBookingRequest {
       scheduledAt: scheduled is Timestamp ? scheduled.toDate() : DateTime.now(),
       durationMinutes: data['durationMinutes'] as int? ?? 60,
       kpCost: data['kpCost'] as int? ?? 0,
+      tutorKp: data['tutorKp'] as int? ?? data['kpCost'] as int? ?? 0,
       notes: data['notes'] as String? ?? '',
       status: data['status'] as String? ?? 'pending',
       createdAt: created is Timestamp ? created.toDate() : DateTime.now(),
@@ -134,6 +140,7 @@ class SessionBookingRequest {
       'scheduledAt': Timestamp.fromDate(scheduledAt),
       'durationMinutes': durationMinutes,
       'kpCost': kpCost,
+      'tutorKp': tutorKp,
       'notes': notes,
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),

@@ -23,7 +23,7 @@ class _BookSessionSheetState extends State<BookSessionSheet> {
   int _durationMinutes = 60;
   final _notesCtrl = TextEditingController();
 
-  int get _kpCost => (widget.tutor.kpPerHour * _durationMinutes / 60).round();
+  int get _kpCost => widget.tutor.kp;
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +98,7 @@ class _BookSessionSheetState extends State<BookSessionSheet> {
                       ],
                     ),
                   ),
-                  KpBadge(label: '${widget.tutor.kpPerHour} KP/jam'),
+                  KpBadge(label: '${widget.tutor.kp} KP'),
                 ],
               ),
             ),
@@ -136,7 +136,6 @@ class _BookSessionSheetState extends State<BookSessionSheet> {
             Wrap(
               spacing: 8,
               children: [60, 90, 120].map((dur) {
-                final kp = (widget.tutor.kpPerHour * dur / 60).round();
                 final selected = _durationMinutes == dur;
                 return GestureDetector(
                   onTap: () => setState(() => _durationMinutes = dur),
@@ -153,7 +152,7 @@ class _BookSessionSheetState extends State<BookSessionSheet> {
                       ),
                     ),
                     child: Text(
-                      '$dur menit · $kp KP',
+                      '$dur menit',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,

@@ -138,9 +138,14 @@ class _CreateRequestSheetState extends State<CreateRequestSheet> {
               }).toList(),
             ),
             const SizedBox(height: 14),
-            _label('Tawaran Knowledge Points (KP)'),
+            _label('KP ditawarkan untuk tutor'),
             const SizedBox(height: 6),
             _field(_kpCtrl, '40', keyboardType: TextInputType.number),
+            const SizedBox(height: 6),
+            Text(
+              'Tutor akan mendapat KP ini, kamu juga mendapat KP saat sesi dimulai.',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            ),
             const SizedBox(height: 24),
             Row(
               children: [

@@ -84,8 +84,36 @@ class MarketplaceService {
     });
   }
 
-  static Future<void> createTutorSession(TutorSession session) {
-    return _db.collection('tutorSessions').add(session.toMap());
+  static Future<void> createTutorSession(TutorSession session) async {
+    final existing = await _db
+        .collection('tutorSessions')
+        .where('tutorId', isEqualTo: session.tutorId)
+        .limit(1)
+        .get();
+
+    if (existing.docs.isNotEmpty) {
+      throw Exception('Tutor hanya boleh memiliki 1 sesi tutor aktif.');
+    }
+
+    await _db.collection('tutorSessions').add(session.toMap());
+  }
+
+  static Future<void> updateTutorSession(TutorSession session) {
+    return _db
+        .collection('tutorSessions')
+        .doc(session.id)
+        .update(session.toMap());
+  }
+
+  static Future<void> deleteTutorSession(String id) {
+    return _db.collection('tutorSessions').doc(id).delete();
+  }
+
+  static Future<void> updateHelpRequest(HelpRequest request) {
+    return _db
+        .collection('helpRequests')
+        .doc(request.id)
+        .update(request.toMap());
   }
 
   static Future<void> deleteHelpRequest(String id) {
@@ -117,6 +145,7 @@ class MarketplaceService {
       'tutorAvatarColor': '#E1F5EE',
       'message': message,
       'status': 'pending',
+      'kpOffered': request.knowledgePoints,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
@@ -144,6 +173,9 @@ class MarketplaceService {
       'participants': [offer.studentId, offer.tutorId],
       'status': 'active',
       'startedAt': FieldValue.serverTimestamp(),
+      'kpAwarded': offer.kpOffered,
+      'kpStudentAwarded': offer.kpOffered,
+      'kpTutorAwarded': offer.kpOffered,
     });
     batch.update(_db.collection('helpOffers').doc(offer.id), {
       'status': 'accepted',
@@ -151,6 +183,21 @@ class MarketplaceService {
     batch.update(_db.collection('helpRequests').doc(offer.requestId), {
       'status': 'confirmed',
     });
+    // KP rule (fix):
+    // - Tutor menerima KP yang ditawarkan student melalui helpOffers
+    // - Student menerima KP yang ditawarkan tutor melalui helpOffers
+    // Untuk saat ini, helpOffer menyimpan kpOffered dari request => itu adalah KP yang diminta student.
+    batch.update(_db.collection('users').doc(offer.tutorId), {
+      'knowledgePoints': FieldValue.increment(offer.kpOffered),
+    });
+
+    // Student KP harusnya didapat dari kp yang ditawarkan tutor saat tutor accept.
+    // Karena field tersebut belum ada, fallback: gunakan kpOffered juga agar tidak nol.
+    // (akan saya tambah field dedicated tutorOfferedKp utk remove ambiguity sepenuhnya)
+    batch.update(_db.collection('users').doc(offer.studentId), {
+      'knowledgePoints': FieldValue.increment(offer.kpOffered),
+    });
+
     await batch.commit();
   }
 
@@ -170,6 +217,7 @@ class MarketplaceService {
       'scheduledAt': Timestamp.fromDate(booking.scheduledAt),
       'durationMinutes': booking.durationMinutes,
       'kpCost': booking.kpCost,
+      'tutorKp': tutor.kp,
       'notes': booking.notes ?? '',
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
@@ -179,6 +227,15 @@ class MarketplaceService {
   static Future<void> acceptBooking(SessionBookingRequest booking) async {
     final sessionRef = _db.collection('tutoringSessions').doc();
     final batch = _db.batch();
+
+    // Rule (fix):
+    // - KP yang ditawarkan tutor = booking.kpCost (ditulis oleh student sebagai kpCost yang bayar ke tutor)
+    // - KP yang ditawarkan student untuk tutor = tutor.kp (field TutorSession.kp)
+    // Di current flow, marketplace_models.SessionBookingRequest belum membawa tutor.kp,
+    // sehingga kita pakai fallback: kpCost untuk student award juga.
+
+    final kpStudentGets = booking.kpCost;
+    final kpTutorGets = booking.tutorKp > 0 ? booking.tutorKp : booking.kpCost;
 
     batch.set(sessionRef, {
       'studentId': booking.studentId,
@@ -194,10 +251,25 @@ class MarketplaceService {
       'participants': [booking.studentId, booking.tutorId],
       'status': 'active',
       'startedAt': FieldValue.serverTimestamp(),
+      'kpAwarded': kpStudentGets,
+      'kpStudentAwarded': kpStudentGets,
+      'kpTutorAwarded': kpTutorGets,
     });
+
     batch.update(_db.collection('sessionBookings').doc(booking.id), {
       'status': 'accepted',
     });
+    // Award KP after session assigned:
+    // - Student gets KP yang ditawarkan tutor (fallback saat ini: kpCost)
+    // - Tutor gets KP yang ditawarkan student (fallback saat ini: kpCost)
+
+    batch.update(_db.collection('users').doc(booking.studentId), {
+      'knowledgePoints': FieldValue.increment(kpStudentGets),
+    });
+    batch.update(_db.collection('users').doc(booking.tutorId), {
+      'knowledgePoints': FieldValue.increment(kpTutorGets),
+    });
+
     await batch.commit();
   }
 

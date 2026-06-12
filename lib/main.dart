@@ -5,6 +5,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'firebase_options.dart';
 import 'screens/auth_gate.dart';
+import 'services/supabase_profile_service.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,8 +21,13 @@ Future<void> main() async {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
+  // Supabase init (untuk upload foto profil)
+  // Catatan: Supabase initialize aman dipanggil setelah dotenv.load
+  await SupabaseProfileService.initSupabase();
+
   runApp(const EduLinkApp());
 }
+
 
 class EduLinkApp extends StatelessWidget {
   const EduLinkApp({super.key});

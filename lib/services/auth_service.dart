@@ -84,8 +84,10 @@ class AuthService {
       email: email,
       role: UserRole.student,
       knowledgePoints: 320,
+      profileImageUrl: null,
     );
   }
+
 
   static Future<AppUser> register({
     required String name,
@@ -106,7 +108,9 @@ class AuthService {
       email: email.trim(),
       role: role,
       knowledgePoints: role == UserRole.student ? 320 : 120,
+      profileImageUrl: null,
     );
+
 
     await firestore.collection('users').doc(user.uid).set({
       ...profile.toMap(),

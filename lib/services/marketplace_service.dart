@@ -292,6 +292,58 @@ class MarketplaceService {
       'senderId': sender.id,
       'senderName': sender.name,
       'text': text.trim(),
+      'attachmentType': null,
+      'attachmentUrl': null,
+      'attachmentName': null,
+      'attachmentMime': null,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  static Future<void> sendMessageImage({
+    required String sessionId,
+    required AppUser sender,
+    required String text,
+    required String imageUrl,
+    required String imageName,
+    String? mime,
+  }) {
+    return _db
+        .collection('tutoringSessions')
+        .doc(sessionId)
+        .collection('messages')
+        .add({
+      'senderId': sender.id,
+      'senderName': sender.name,
+      'text': text.trim(),
+      'attachmentType': 'image',
+      'attachmentUrl': imageUrl,
+      'attachmentName': imageName,
+      'attachmentMime': mime,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  static Future<void> sendMessageDoc({
+    required String sessionId,
+    required AppUser sender,
+    required String text,
+    required String docUrl,
+    required String docName,
+    String? mime,
+  }) {
+    return _db
+        .collection('tutoringSessions')
+        .doc(sessionId)
+        .collection('messages')
+        .add({
+      'senderId': sender.id,
+      'senderName': sender.name,
+      'text': text.trim(),
+      'attachmentType': 'doc',
+      'attachmentUrl': docUrl,
+      'attachmentName': docName,
+      'attachmentMime': mime,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }

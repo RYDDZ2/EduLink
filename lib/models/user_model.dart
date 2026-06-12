@@ -6,6 +6,7 @@ class AppUser {
   final String email;
   final UserRole role;
   final int knowledgePoints;
+  final String? profileImageUrl;
 
   const AppUser({
     required this.id,
@@ -13,7 +14,9 @@ class AppUser {
     required this.email,
     required this.role,
     required this.knowledgePoints,
+    this.profileImageUrl,
   });
+
 
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -23,6 +26,8 @@ class AppUser {
   }
 
   String get roleLabel => role == UserRole.student ? 'Student' : 'Tutor';
+
+  String get displayProfileImageUrl => profileImageUrl ?? '';
 
   static UserRole roleFromString(String value) {
     final normalized = value.trim().toLowerCase();
@@ -38,6 +43,7 @@ class AppUser {
       email: data['email'] as String? ?? '',
       role: roleFromString(data['role'] as String? ?? 'student'),
       knowledgePoints: data['knowledgePoints'] as int? ?? 320,
+      profileImageUrl: data['profileImageUrl'] as String?,
     );
   }
 
@@ -47,6 +53,7 @@ class AppUser {
       'email': email,
       'role': role == UserRole.student ? 'student' : 'tutor',
       'knowledgePoints': knowledgePoints,
+      if (profileImageUrl != null) 'profileImageUrl': profileImageUrl,
     };
   }
 }

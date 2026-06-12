@@ -217,7 +217,15 @@ class ChatMessage {
   final String id;
   final String senderId;
   final String senderName;
+
   final String text;
+
+  /// 'image' | 'doc' | 'file' | null
+  final String? attachmentType;
+  final String? attachmentUrl;
+  final String? attachmentName;
+  final String? attachmentMime;
+
   final DateTime createdAt;
 
   const ChatMessage({
@@ -225,16 +233,25 @@ class ChatMessage {
     required this.senderId,
     required this.senderName,
     required this.text,
+    required this.attachmentType,
+    required this.attachmentUrl,
+    required this.attachmentName,
+    required this.attachmentMime,
     required this.createdAt,
   });
 
   factory ChatMessage.fromMap(String id, Map<String, dynamic> data) {
     final created = data['createdAt'];
+
     return ChatMessage(
       id: id,
       senderId: data['senderId'] as String? ?? '',
       senderName: data['senderName'] as String? ?? '',
       text: data['text'] as String? ?? '',
+      attachmentType: data['attachmentType'] as String?,
+      attachmentUrl: data['attachmentUrl'] as String?,
+      attachmentName: data['attachmentName'] as String?,
+      attachmentMime: data['attachmentMime'] as String?,
       createdAt: created is Timestamp ? created.toDate() : DateTime.now(),
     );
   }

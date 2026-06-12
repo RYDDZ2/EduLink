@@ -15,6 +15,7 @@ class HelpRequest {
   final RequestStatus status;
   final DateTime createdAt;
   final String? availableTime;
+  final String? imageUrl;
 
   HelpRequest({
     required this.id,
@@ -29,6 +30,7 @@ class HelpRequest {
     required this.status,
     required this.createdAt,
     this.availableTime,
+    this.imageUrl,
   });
 
   static RequestStatus statusFromString(String value) {
@@ -70,6 +72,7 @@ class HelpRequest {
       status: statusFromString(data['status'] as String? ?? 'open'),
       createdAt: created is Timestamp ? created.toDate() : DateTime.now(),
       availableTime: data['availableTime'] as String?,
+      imageUrl: data['imageUrl'] as String?,
     );
   }
 
@@ -86,6 +89,7 @@ class HelpRequest {
       'status': statusKey,
       'createdAt': Timestamp.fromDate(createdAt),
       'availableTime': availableTime,
+      if (imageUrl != null) 'imageUrl': imageUrl,
     };
   }
 }

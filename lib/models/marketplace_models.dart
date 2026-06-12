@@ -183,6 +183,10 @@ class TutoringSession {
 
   bool get isActive => status == 'active';
 
+  String otherId(String currentUserId) {
+    return currentUserId == studentId ? tutorId : studentId;
+  }
+
   String otherName(String currentUserId) {
     return currentUserId == studentId ? tutorName : studentName;
   }

@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/help_request_model.dart';
+import '../services/supabase_request_image_service.dart';
 import '../widgets/common_widgets.dart';
 
 class EditRequestSheet extends StatefulWidget {
@@ -22,8 +26,12 @@ class _EditRequestSheetState extends State<EditRequestSheet> {
   late final TextEditingController _descCtrl;
   late final TextEditingController _timeCtrl;
   late final TextEditingController _kpCtrl;
+  final _customTagCtrl = TextEditingController();
   final List<String> _selectedTags = <String>[];
   bool _isSaving = false;
+  final ImagePicker _picker = ImagePicker();
+  XFile? _pickedImage;
+  bool _removeExistingImage = false;
 
   final List<String> _availableTags = [
     'Matematika',
@@ -57,7 +65,31 @@ class _EditRequestSheetState extends State<EditRequestSheet> {
     _descCtrl.dispose();
     _timeCtrl.dispose();
     _kpCtrl.dispose();
+    _customTagCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1280,
+    );
+    if (picked == null) return;
+    if (!mounted) return;
+    setState(() {
+      _pickedImage = picked;
+      _removeExistingImage = false;
+    });
+  }
+
+  void _addCustomTag() {
+    final tag = _customTagCtrl.text.trim();
+    if (tag.isEmpty) return;
+    if (!_selectedTags.any((t) => t.toLowerCase() == tag.toLowerCase())) {
+      setState(() => _selectedTags.add(tag));
+    }
+    _customTagCtrl.clear();
   }
 
   @override
@@ -110,41 +142,70 @@ class _EditRequestSheetState extends State<EditRequestSheet> {
               const SizedBox(height: 6),
               _field(_timeCtrl, 'cth: Malam ini, 19.00–21.00'),
               const SizedBox(height: 14),
+              _label('Lampiran gambar (opsional)'),
+              const SizedBox(height: 8),
+              _buildImagePicker(),
+              const SizedBox(height: 14),
               _label('Tag topik'),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: _availableTags.map((tag) {
-                  final selected = _selectedTags.contains(tag);
-                  return GestureDetector(
-                    onTap: () => setState(() {
-                      selected
-                          ? _selectedTags.remove(tag)
-                          : _selectedTags.add(tag);
-                    }),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: selected ? Colors.black87 : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(99),
-                        border: Border.all(
-                            color: selected
-                                ? Colors.black87
-                                : Colors.grey.shade300),
-                      ),
-                      child: Text(
-                        tag,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: selected ? Colors.white : Colors.grey.shade700,
+                children: [
+                  ..._availableTags.map((tag) {
+                    final selected = _selectedTags.contains(tag);
+                    return GestureDetector(
+                      onTap: () => setState(() {
+                        selected
+                            ? _selectedTags.remove(tag)
+                            : _selectedTags.add(tag);
+                      }),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color:
+                              selected ? Colors.black87 : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(99),
+                          border: Border.all(
+                              color: selected
+                                  ? Colors.black87
+                                  : Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          tag,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color:
+                                selected ? Colors.white : Colors.grey.shade700,
+                          ),
                         ),
                       ),
+                    );
+                  }),
+                  ..._selectedTags
+                      .where((tag) => !_availableTags.contains(tag))
+                      .map(_buildCustomTagChip),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _customTagCtrl,
+                      onSubmitted: (_) => _addCustomTag(),
+                      decoration: _inputDeco('Tambah tag custom...'),
                     ),
-                  );
-                }).toList(),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _addCustomTag,
+                    icon: const Icon(Icons.add_circle_rounded),
+                    color: Colors.black87,
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
               _label('KP ditawarkan untuk tutor'),
@@ -185,6 +246,16 @@ class _EditRequestSheetState extends State<EditRequestSheet> {
     setState(() => _isSaving = true);
 
     try {
+      String? imageUrl = widget.request.imageUrl;
+      if (_pickedImage != null) {
+        imageUrl = await SupabaseRequestImageService.uploadRequestImage(
+          userId: widget.request.userId,
+          xfile: _pickedImage!,
+        );
+      } else if (_removeExistingImage) {
+        imageUrl = null;
+      }
+
       await widget.onUpdated(
         HelpRequest(
           id: widget.request.id,
@@ -201,12 +272,140 @@ class _EditRequestSheetState extends State<EditRequestSheet> {
           createdAt: widget.request.createdAt,
           availableTime:
               _timeCtrl.text.trim().isEmpty ? null : _timeCtrl.text.trim(),
+          imageUrl: imageUrl,
         ),
       );
       if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengunggah gambar: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  Widget _buildImagePicker() {
+    final existingUrl = widget.request.imageUrl;
+
+    if (_pickedImage != null) {
+      return _imagePreview(
+        image: Image.file(
+          File(_pickedImage!.path),
+          width: double.infinity,
+          height: 160,
+          fit: BoxFit.cover,
+        ),
+        onRemove: () => setState(() => _pickedImage = null),
+      );
+    }
+
+    if (!_removeExistingImage &&
+        existingUrl != null &&
+        existingUrl.trim().isNotEmpty) {
+      return _imagePreview(
+        image: Image.network(
+          existingUrl,
+          width: double.infinity,
+          height: 160,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            color: Colors.grey.shade100,
+            height: 160,
+            alignment: Alignment.center,
+            child: const Icon(Icons.broken_image_outlined,
+                color: Colors.black26),
+          ),
+        ),
+        onRemove: () => setState(() => _removeExistingImage = true),
+      );
+    }
+
+    return InkWell(
+      onTap: _pickImage,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.add_photo_alternate_outlined,
+                color: Colors.grey.shade500, size: 28),
+            const SizedBox(height: 6),
+            Text(
+              'Tambah gambar dari galeri',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _imagePreview({required Widget image, required VoidCallback onRemove}) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: image,
+        ),
+        Positioned(
+          right: 6,
+          top: 6,
+          child: Material(
+            color: Colors.black54,
+            shape: const CircleBorder(),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: onRemove,
+              child: const Padding(
+                padding: EdgeInsets.all(6),
+                child: Icon(Icons.close_rounded, size: 16, color: Colors.white),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCustomTagChip(String tag) {
+    return Container(
+      padding: const EdgeInsets.only(left: 10, right: 4, top: 5, bottom: 5),
+      decoration: BoxDecoration(
+        color: Colors.black87,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            tag,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 2),
+          InkWell(
+            onTap: () => setState(() => _selectedTags.remove(tag)),
+            borderRadius: BorderRadius.circular(999),
+            child: const Padding(
+              padding: EdgeInsets.all(2),
+              child: Icon(Icons.close_rounded, size: 14, color: Colors.white70),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _label(String text) => Text(

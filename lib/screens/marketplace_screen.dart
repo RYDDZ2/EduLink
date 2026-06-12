@@ -349,6 +349,7 @@ class _MarketplaceAppBar extends StatelessWidget
               bgColorHex:
                   currentUser.role == UserRole.tutor ? '#E1F5EE' : '#EEEDFE',
               size: 36,
+              imageUrl: currentUser.profileImageUrl,
             ),
           ),
         ],

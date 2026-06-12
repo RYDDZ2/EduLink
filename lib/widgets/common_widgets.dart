@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../theme.dart';
 
@@ -5,16 +6,69 @@ class AvatarWidget extends StatelessWidget {
   final String initials;
   final String bgColorHex;
   final double size;
+  final String? imageUrl;
 
   const AvatarWidget({
     super.key,
     required this.initials,
     required this.bgColorHex,
     this.size = 40,
+    this.imageUrl,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasPhoto = imageUrl != null && imageUrl!.isNotEmpty;
+
+    if (hasPhoto) {
+      return ClipOval(
+        child: Image.network(
+          imageUrl!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: AppTheme.hexToColor(bgColorHex),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  initials,
+                  style: TextStyle(
+                    fontSize: size * 0.35,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.avatarTextColor(bgColorHex),
+                  ),
+                ),
+              ),
+            );
+          },
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: AppTheme.hexToColor(bgColorHex),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
     return Container(
       width: size,
       height: size,
@@ -32,6 +86,80 @@ class AvatarWidget extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Avatar that resolves a user's real profile photo from Firestore by
+/// [userId], falling back to the [initials]/[bgColorHex] placeholder while
+/// loading or when the account has no uploaded photo.
+class UserAvatar extends StatefulWidget {
+  final String userId;
+  final String initials;
+  final String bgColorHex;
+  final double size;
+
+  const UserAvatar({
+    super.key,
+    required this.userId,
+    required this.initials,
+    required this.bgColorHex,
+    this.size = 40,
+  });
+
+  @override
+  State<UserAvatar> createState() => _UserAvatarState();
+}
+
+class _UserAvatarState extends State<UserAvatar> {
+  static final Map<String, String> _imageUrlCache = {};
+
+  String? _imageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveImage();
+  }
+
+  @override
+  void didUpdateWidget(covariant UserAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId) {
+      _imageUrl = null;
+      _resolveImage();
+    }
+  }
+
+  void _resolveImage() {
+    if (widget.userId.isEmpty) return;
+
+    final cached = _imageUrlCache[widget.userId];
+    if (cached != null) {
+      _imageUrl = cached;
+      return;
+    }
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.userId)
+        .get()
+        .then((doc) {
+      final url = doc.data()?['profileImageUrl'] as String? ?? '';
+      _imageUrlCache[widget.userId] = url;
+      if (mounted && url.isNotEmpty) {
+        setState(() => _imageUrl = url);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AvatarWidget(
+      initials: widget.initials,
+      bgColorHex: widget.bgColorHex,
+      size: widget.size,
+      imageUrl: _imageUrl,
     );
   }
 }

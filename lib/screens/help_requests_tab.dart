@@ -154,7 +154,8 @@ class _RequestCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AvatarWidget(
+                UserAvatar(
+                  userId: request.userId,
                   initials: request.userInitials,
                   bgColorHex: request.userAvatarColor,
                   size: 38,
@@ -205,6 +206,20 @@ class _RequestCard extends StatelessWidget {
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            if (request.imageUrl != null &&
+                request.imageUrl!.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  request.imageUrl!,
+                  width: double.infinity,
+                  height: 140,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
               ),
             ],
             const SizedBox(height: 10),

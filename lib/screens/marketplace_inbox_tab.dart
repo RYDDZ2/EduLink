@@ -85,6 +85,7 @@ class _OfferTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _InboxCard(
+      userId: offer.tutorId,
       title: offer.tutorName,
       subtitle: 'Menawarkan bantuan untuk: ${offer.requestTitle}',
       status: offer.status,
@@ -125,6 +126,7 @@ class _BookingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _InboxCard(
+      userId: booking.studentId,
       title: booking.studentName,
       subtitle: 'Memesan ${booking.subject} · ${booking.durationMinutes} menit',
       status: booking.status,
@@ -166,6 +168,7 @@ class _BookingTile extends StatelessWidget {
 }
 
 class _InboxCard extends StatelessWidget {
+  final String userId;
   final String title;
   final String subtitle;
   final String status;
@@ -174,6 +177,7 @@ class _InboxCard extends StatelessWidget {
   final List<Widget> actions;
 
   const _InboxCard({
+    required this.userId,
     required this.title,
     required this.subtitle,
     required this.status,
@@ -195,7 +199,7 @@ class _InboxCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              AvatarWidget(initials: initials, bgColorHex: bgColor),
+              UserAvatar(userId: userId, initials: initials, bgColorHex: bgColor),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

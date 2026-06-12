@@ -52,7 +52,8 @@ class MarketplaceActivityTab extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    AvatarWidget(
+                    UserAvatar(
+                      userId: session.otherId(currentUser.id),
                       initials: session.otherInitials(currentUser.id),
                       bgColorHex: currentUser.id == session.studentId
                           ? '#E1F5EE'

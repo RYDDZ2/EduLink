@@ -192,42 +192,45 @@ class _ChatScreenState extends State<ChatScreen> {
           borderRadius: BorderRadius.circular(12),
           border: isMine ? null : Border.all(color: Colors.grey.shade200),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (message.text.trim().isNotEmpty)
-              Padding(
-                padding: EdgeInsets.only(
-                  bottom: message.attachmentUrl != null ? 8.0 : 0,
+        child: IntrinsicWidth(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (message.text.trim().isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: message.attachmentUrl != null ? 8.0 : 0,
+                  ),
+                  child: Text(
+                    message.text,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.35,
+                      color: isMine ? Colors.white : Colors.black87,
+                    ),
+                  ),
                 ),
+              if (message.attachmentUrl != null &&
+                  message.attachmentType == 'image')
+                _buildImageAttachment(message, isMine),
+              if (message.attachmentUrl != null &&
+                  (message.attachmentType == 'doc' ||
+                      message.attachmentType == 'file'))
+                _buildDocAttachment(message, isMine),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.bottomRight,
                 child: Text(
-                  message.text,
+                  _formatTime(message.createdAt),
                   style: TextStyle(
-                    fontSize: 14,
-                    height: 1.35,
-                    color: isMine ? Colors.white : Colors.black87,
+                    fontSize: 11,
+                    color: isMine ? Colors.white70 : Colors.black45,
                   ),
                 ),
               ),
-            if (message.attachmentUrl != null &&
-                message.attachmentType == 'image')
-              _buildImageAttachment(message, isMine),
-            if (message.attachmentUrl != null &&
-                (message.attachmentType == 'doc' ||
-                    message.attachmentType == 'file'))
-              _buildDocAttachment(message, isMine),
-            const SizedBox(height: 6),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Text(
-                _formatTime(message.createdAt),
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isMine ? Colors.white70 : Colors.black45,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

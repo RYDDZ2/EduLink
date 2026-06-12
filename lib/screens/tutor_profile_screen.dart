@@ -62,7 +62,8 @@ class _TutorProfileScreenState extends State<TutorProfileScreen> {
               children: [
                 Row(
                   children: [
-                    AvatarWidget(
+                    UserAvatar(
+                      userId: tutor.tutorId,
                       initials: tutor.tutorInitials,
                       bgColorHex: tutor.tutorAvatarColor,
                       size: 58,

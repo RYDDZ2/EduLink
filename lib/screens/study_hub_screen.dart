@@ -100,6 +100,7 @@ class _StudyHubScreenState extends State<StudyHubScreen> {
         title: _EduTitle(
           subtitle: 'Community Study Hubs',
           initials: widget.currentUser.initials,
+          imageUrl: widget.currentUser.profileImageUrl,
         ),
       ),
       body: ListView(
@@ -186,8 +187,13 @@ class _StudyHubScreenState extends State<StudyHubScreen> {
 class _EduTitle extends StatelessWidget {
   final String subtitle;
   final String initials;
+  final String? imageUrl;
 
-  const _EduTitle({required this.subtitle, required this.initials});
+  const _EduTitle({
+    required this.subtitle,
+    required this.initials,
+    this.imageUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -223,7 +229,12 @@ class _EduTitle extends StatelessWidget {
             ],
           ),
         ),
-        AvatarWidget(initials: initials, bgColorHex: '#E1F5EE', size: 36),
+        AvatarWidget(
+          initials: initials,
+          bgColorHex: '#E1F5EE',
+          size: 36,
+          imageUrl: imageUrl,
+        ),
       ],
     );
   }

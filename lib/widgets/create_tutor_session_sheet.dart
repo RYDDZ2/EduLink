@@ -112,6 +112,7 @@ class _CreateTutorSessionSheetState extends State<CreateTutorSessionSheet> {
                     AvatarWidget(
                       initials: widget.currentUser.initials,
                       bgColorHex: '#E1F5EE',
+                      imageUrl: widget.currentUser.profileImageUrl,
                     ),
                     const SizedBox(width: 10),
                     Expanded(

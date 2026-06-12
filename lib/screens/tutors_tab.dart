@@ -5,7 +5,7 @@ import '../models/user_model.dart';
 import '../widgets/common_widgets.dart';
 import 'tutor_profile_screen.dart';
 
-class TutorsTab extends StatelessWidget {
+class TutorsTab extends StatefulWidget {
   final List<TutorSession> tutors;
   final AppUser currentUser;
   final Future<void> Function(TutorSession session) onEditTutorSession;
@@ -20,26 +20,74 @@ class TutorsTab extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    if (tutors.isEmpty) {
-      return const Center(
-        child: Text(
-          'Belum ada tutor tersedia',
-          style: TextStyle(color: Colors.black38),
-        ),
-      );
-    }
+  State<TutorsTab> createState() => _TutorsTabState();
+}
 
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      itemCount: tutors.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, index) => _TutorCard(
-        tutor: tutors[index],
-        currentUser: currentUser,
-        onEditTutorSession: onEditTutorSession,
-        onDeleteTutorSession: onDeleteTutorSession,
-      ),
+class _TutorsTabState extends State<TutorsTab> {
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _searchQuery.trim().toLowerCase();
+    final filtered = widget.tutors.where((tutor) {
+      if (query.isEmpty) return true;
+      return tutor.tutorName.toLowerCase().contains(query) ||
+          tutor.subjects.any((s) => s.toLowerCase().contains(query));
+    }).toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: TextField(
+            onChanged: (value) => setState(() => _searchQuery = value),
+            decoration: InputDecoration(
+              hintText: 'Cari tutor berdasarkan nama atau mata pelajaran...',
+              hintStyle: const TextStyle(fontSize: 13, color: Colors.black38),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                size: 20,
+                color: Colors.black38,
+              ),
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: widget.tutors.isEmpty
+              ? const Center(
+                  child: Text(
+                    'Belum ada tutor tersedia',
+                    style: TextStyle(color: Colors.black38),
+                  ),
+                )
+              : filtered.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Tutor tidak ditemukan',
+                        style: TextStyle(color: Colors.black38),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (_, index) => _TutorCard(
+                        tutor: filtered[index],
+                        currentUser: widget.currentUser,
+                        onEditTutorSession: widget.onEditTutorSession,
+                        onDeleteTutorSession: widget.onDeleteTutorSession,
+                      ),
+                    ),
+        ),
+      ],
     );
   }
 }
@@ -95,7 +143,8 @@ class _TutorCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                AvatarWidget(
+                UserAvatar(
+                  userId: tutor.tutorId,
                   initials: tutor.tutorInitials,
                   bgColorHex: tutor.tutorAvatarColor,
                   size: 48,

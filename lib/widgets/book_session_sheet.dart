@@ -72,7 +72,8 @@ class _BookSessionSheetState extends State<BookSessionSheet> {
               ),
               child: Row(
                 children: [
-                  AvatarWidget(
+                  UserAvatar(
+                    userId: widget.tutor.tutorId,
                     initials: widget.tutor.tutorInitials,
                     bgColorHex: widget.tutor.tutorAvatarColor,
                   ),

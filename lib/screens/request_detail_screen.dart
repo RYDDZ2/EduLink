@@ -53,7 +53,8 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               children: [
                 Row(
                   children: [
-                    AvatarWidget(
+                    UserAvatar(
+                      userId: request.userId,
                       initials: request.userInitials,
                       bgColorHex: request.userAvatarColor,
                     ),
@@ -102,6 +103,32 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                     color: Colors.black54,
                   ),
                 ),
+                if (request.imageUrl != null &&
+                    request.imageUrl!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  GestureDetector(
+                    onTap: () => _showImagePreview(context, request.imageUrl!),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        request.imageUrl!,
+                        width: double.infinity,
+                        height: 200,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          height: 200,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.broken_image_outlined,
+                              color: Colors.black26),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 Wrap(
                   spacing: 6,
@@ -124,6 +151,62 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  void _showImagePreview(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: InteractiveViewer(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 300,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.white54,
+                      size: 48,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 6,
+              top: 6,
+              child: Material(
+                color: Colors.black54,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => Navigator.pop(context),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

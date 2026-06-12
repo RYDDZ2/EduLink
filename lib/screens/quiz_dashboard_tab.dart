@@ -259,7 +259,9 @@ class _QuizCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            quiz.materialText,
+            quiz.questions.isEmpty
+                ? quiz.materialText
+                : '${quiz.questions.length} soal pilihan ganda siap dikerjakan siswa.',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -282,6 +284,10 @@ class _QuizCard extends StatelessWidget {
                 label: quiz.tutorName,
               ),
               InfoChip(
+                icon: Icons.format_list_numbered_rounded,
+                label: '${quiz.questionCount} soal',
+              ),
+              InfoChip(
                 icon: Icons.speed_rounded,
                 label: _difficultyLabel(quiz.difficulty),
               ),
@@ -298,7 +304,7 @@ class _QuizCard extends StatelessWidget {
             children: [
               Expanded(
                 child: EduButton(
-                  label: 'Edit Materi',
+                  label: 'Edit Quiz',
                   icon: Icons.edit_outlined,
                   isPrimary: true,
                   onTap: onEdit,

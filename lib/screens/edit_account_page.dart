@@ -1,12 +1,15 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/supabase_profile_service.dart';
+import '../widgets/bio_fields_form.dart';
+import '../widgets/common_widgets.dart';
 
 class EditAccountPage extends StatefulWidget {
   final AppUser currentUser;
@@ -19,6 +22,7 @@ class EditAccountPage extends StatefulWidget {
 
 class _EditAccountPageState extends State<EditAccountPage> {
   final _nameController = TextEditingController();
+  final _bioFormKey = GlobalKey<BioFieldsFormState>();
   final _picker = ImagePicker();
 
   XFile? _pickedImage;
@@ -134,6 +138,8 @@ class _EditAccountPageState extends State<EditAccountPage> {
       return;
     }
 
+    if (!_bioFormKey.currentState!.validate()) return;
+
     if (_isSaving) return;
     setState(() => _isSaving = true);
 
@@ -146,6 +152,9 @@ class _EditAccountPageState extends State<EditAccountPage> {
         );
       }
 
+      final studentBio = _bioFormKey.currentState!.studentBio;
+      final tutorBio = _bioFormKey.currentState!.tutorBio;
+
       await AuthService.firestore
           .collection('users')
           .doc(widget.currentUser.id)
@@ -153,6 +162,8 @@ class _EditAccountPageState extends State<EditAccountPage> {
         {
           'name': newName,
           if (newPhotoUrl != null) 'profileImageUrl': newPhotoUrl,
+          if (studentBio != null) 'studentBio': studentBio.toMap(),
+          if (tutorBio != null) 'tutorBio': tutorBio.toMap(),
           'updatedAt': FieldValue.serverTimestamp(),
         },
         SetOptions(merge: true),
@@ -177,6 +188,147 @@ class _EditAccountPageState extends State<EditAccountPage> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  Future<void> _confirmDeleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Akun?'),
+        content: const Text(
+          'Tindakan ini akan menghapus akun, profil, dan seluruh data '
+          'terkait secara permanen. Tindakan ini tidak dapat dibatalkan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Hapus Akun'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteAccount();
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    setState(() => _isSaving = true);
+    try {
+      await AuthService.deleteAccount();
+
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        final password = await _askPassword();
+        if (password == null || password.isEmpty) {
+          if (mounted) setState(() => _isSaving = false);
+          return;
+        }
+
+        try {
+          await AuthService.reauthenticateWithPassword(password);
+          await AuthService.deleteAccount();
+
+          if (!mounted) return;
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          return;
+        } catch (e2) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(_authErrorMessage(e2))),
+          );
+        }
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_authErrorMessage(e))),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_authErrorMessage(e))),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<String?> _askPassword() {
+    final passwordCtrl = TextEditingController();
+    bool obscure = true;
+
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Konfirmasi Password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Untuk keamanan, masukkan kembali password kamu sebelum '
+                'menghapus akun.',
+                style: TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: passwordCtrl,
+                obscureText: obscure,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscure
+                          ? Icons.visibility_rounded
+                          : Icons.visibility_off_rounded,
+                    ),
+                    onPressed: () =>
+                        setDialogState(() => obscure = !obscure),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(passwordCtrl.text),
+              child: const Text('Konfirmasi'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _authErrorMessage(Object e) {
+    if (e is FirebaseAuthException) {
+      switch (e.code) {
+        case 'wrong-password':
+        case 'invalid-credential':
+          return 'Password yang kamu masukkan salah.';
+        case 'too-many-requests':
+          return 'Terlalu banyak percobaan. Coba lagi nanti.';
+        case 'requires-recent-login':
+          return 'Sesi login sudah lama. Silakan login ulang lalu coba lagi.';
+        default:
+          return e.message ?? 'Gagal menghapus akun (${e.code})';
+      }
+    }
+    return e.toString();
   }
 
   @override
@@ -299,6 +451,37 @@ class _EditAccountPageState extends State<EditAccountPage> {
             style: const TextStyle(fontSize: 15),
           ),
           const SizedBox(height: 24),
+          const Text(
+            'Bio Jabatan',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            widget.currentUser.role == UserRole.student
+                ? 'Tampil di halaman permintaan bantuan agar tutor mengenal jenjangmu.'
+                : 'Tampil di profil tutor. Kamu tetap bisa menerima permintaan di luar bidang ini.',
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: BioFieldsForm(
+              key: _bioFormKey,
+              role: widget.currentUser.role,
+              initialStudentBio: widget.currentUser.studentBio,
+              initialTutorBio: widget.currentUser.tutorBio,
+            ),
+          ),
+          const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
             height: 48,
@@ -328,6 +511,29 @@ class _EditAccountPageState extends State<EditAccountPage> {
                       ),
                     ),
             ),
+          ),
+          const SizedBox(height: 28),
+          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+          const SizedBox(height: 20),
+          const Text(
+            'Hapus Akun',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Akun, profil, dan seluruh data terkait akan dihapus permanen dan tidak dapat dikembalikan.',
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+          ),
+          const SizedBox(height: 10),
+          EduButton(
+            label: 'Hapus Akun',
+            icon: Icons.delete_forever_rounded,
+            isDanger: true,
+            onTap: _isSaving ? () {} : _confirmDeleteAccount,
           ),
         ],
       ),

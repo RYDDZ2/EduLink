@@ -260,6 +260,7 @@ class _CreateRequestSheetState extends State<CreateRequestSheet> {
         createdAt: DateTime.now(),
         availableTime: _timeCtrl.text,
         imageUrl: imageUrl,
+        userJabatan: widget.currentUser.jabatanLabel,
       );
       await widget.onCreated(newRequest);
       if (mounted) Navigator.pop(context);

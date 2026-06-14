@@ -14,6 +14,7 @@ class TutorSession {
   final List<String> daysAvailability; // days string(s)
 
   final bool isAvailableNow;
+  final String tutorJabatan;
 
   TutorSession({
 
@@ -29,6 +30,7 @@ class TutorSession {
     required this.timeAvailabilityMinutes,
     required this.daysAvailability,
     required this.isAvailableNow,
+    this.tutorJabatan = '',
   });
 
 
@@ -80,6 +82,7 @@ class TutorSession {
           const <String>[],
 
       isAvailableNow: data['isAvailableNow'] as bool? ?? false,
+      tutorJabatan: data['tutorJabatan'] as String? ?? '',
     );
 
   }
@@ -103,6 +106,7 @@ class TutorSession {
           ? timeAvailabilityMinutes[1]
           : 0,
       'isAvailableNow': isAvailableNow,
+      'tutorJabatan': tutorJabatan,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }

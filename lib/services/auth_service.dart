@@ -130,4 +130,29 @@ class AuthService {
   }
 
   static Future<void> logout() => auth.signOut();
+
+  /// Menghapus dokumen profil di Firestore lalu menghapus akun Firebase Auth.
+  ///
+  /// Jika Firebase menolak dengan `requires-recent-login`, panggil
+  /// [reauthenticateWithPassword] lalu ulangi pemanggilan method ini.
+  static Future<void> deleteAccount() async {
+    final user = auth.currentUser;
+    if (user == null) return;
+
+    await firestore.collection('users').doc(user.uid).delete();
+    await user.delete();
+  }
+
+  /// Re-autentikasi user dengan password untuk memenuhi syarat
+  /// `requires-recent-login` sebelum menghapus akun.
+  static Future<void> reauthenticateWithPassword(String password) async {
+    final user = auth.currentUser;
+    if (user == null || user.email == null) return;
+
+    final credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: password,
+    );
+    await user.reauthenticateWithCredential(credential);
+  }
 }

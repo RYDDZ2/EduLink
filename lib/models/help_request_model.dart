@@ -16,6 +16,7 @@ class HelpRequest {
   final DateTime createdAt;
   final String? availableTime;
   final String? imageUrl;
+  final String userJabatan;
 
   HelpRequest({
     required this.id,
@@ -31,6 +32,7 @@ class HelpRequest {
     required this.createdAt,
     this.availableTime,
     this.imageUrl,
+    this.userJabatan = '',
   });
 
   static RequestStatus statusFromString(String value) {
@@ -73,6 +75,7 @@ class HelpRequest {
       createdAt: created is Timestamp ? created.toDate() : DateTime.now(),
       availableTime: data['availableTime'] as String?,
       imageUrl: data['imageUrl'] as String?,
+      userJabatan: data['userJabatan'] as String? ?? '',
     );
   }
 
@@ -90,6 +93,7 @@ class HelpRequest {
       'createdAt': Timestamp.fromDate(createdAt),
       'availableTime': availableTime,
       if (imageUrl != null) 'imageUrl': imageUrl,
+      'userJabatan': userJabatan,
     };
   }
 }

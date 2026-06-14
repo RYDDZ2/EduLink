@@ -235,6 +235,7 @@ class _CreateTutorSessionSheetState extends State<CreateTutorSessionSheet> {
       timeAvailabilityMinutes: [startMinutes, endMinutes],
       daysAvailability: daysAvailability,
       isAvailableNow: false,
+      tutorJabatan: widget.currentUser.jabatanLabel,
     );
 
     try {

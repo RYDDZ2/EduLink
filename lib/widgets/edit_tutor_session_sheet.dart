@@ -186,6 +186,7 @@ class _EditTutorSessionSheetState extends State<EditTutorSessionSheet> {
           timeAvailabilityMinutes: [startMinutes, endMinutes],
           daysAvailability: days,
           isAvailableNow: widget.session.isAvailableNow,
+          tutorJabatan: widget.session.tutorJabatan,
         ),
       );
       if (mounted) {

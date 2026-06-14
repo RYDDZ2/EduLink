@@ -70,6 +70,11 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
+                          if (request.userJabatan.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: TagChip(label: request.userJabatan),
+                            ),
                           Text(
                             request.availableTime ?? 'Waktu fleksibel',
                             style: const TextStyle(

@@ -123,6 +123,11 @@ class _TutorProfileScreenState extends State<TutorProfileScreen> {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
+                    if (tutor.tutorJabatan.isNotEmpty)
+                      InfoChip(
+                        icon: Icons.badge_outlined,
+                        label: tutor.tutorJabatan,
+                      ),
                     if (tutor.daysAvailability.isNotEmpty)
                       InfoChip(
                         icon: Icons.calendar_month_outlined,

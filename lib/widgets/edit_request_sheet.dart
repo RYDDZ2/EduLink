@@ -273,6 +273,7 @@ class _EditRequestSheetState extends State<EditRequestSheet> {
           availableTime:
               _timeCtrl.text.trim().isEmpty ? null : _timeCtrl.text.trim(),
           imageUrl: imageUrl,
+          userJabatan: widget.request.userJabatan,
         ),
       );
       if (mounted) Navigator.pop(context);

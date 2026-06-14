@@ -190,6 +190,10 @@ class _RequestCard extends StatelessWidget {
                           color: Colors.black45,
                         ),
                       ),
+                      if (request.userJabatan.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        TagChip(label: request.userJabatan),
+                      ],
                     ],
                   ),
                 ),

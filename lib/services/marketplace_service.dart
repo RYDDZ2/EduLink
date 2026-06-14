@@ -21,6 +21,7 @@ class MarketplaceService {
             .toList());
   }
 
+
   static Stream<List<TutorSession>> tutorSessions() {
     return _db
         .collection('tutorSessions')
@@ -77,12 +78,65 @@ class MarketplaceService {
             .toList());
   }
 
-  static Future<void> createHelpRequest(HelpRequest request) {
-    return _db.collection('helpRequests').add({
-      ...request.toMap(),
+  static Future<void> createHelpRequest(HelpRequest request) async {
+    final req = request;
+    // Best effort: kalau user belum punya userJabatan pada request,
+    // coba ambil dari users/{uid}.
+    if (req.userJabatan.trim().isEmpty) {
+      final doc = await _db.collection('users').doc(req.userId).get();
+      final data = doc.data();
+      if (data != null) {
+        final user = AppUser.fromMap(req.userId, data);
+        if (user.jabatanLabel.trim().isNotEmpty) {
+          // buat copy dengan userJabatan terisi
+          final enriched = HelpRequest(
+            id: req.id,
+            userId: req.userId,
+            userName: req.userName,
+            userInitials: req.userInitials,
+            userAvatarColor: req.userAvatarColor,
+            title: req.title,
+            description: req.description,
+            tags: req.tags,
+            knowledgePoints: req.knowledgePoints,
+            status: req.status,
+            createdAt: req.createdAt,
+            availableTime: req.availableTime,
+            imageUrl: req.imageUrl,
+            userJabatan: user.jabatanLabel,
+          );
+          await _db.collection('helpRequests').add({
+            ...enriched.toMap(),
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+          return;
+        }
+      }
+    }
+
+    await _db.collection('helpRequests').add({
+      ...req.toMap(),
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
+
+
+  static Future<void> _enrichHelpRequestJabatanIfMissing(
+    HelpRequest request,
+  ) async {
+    if (request.userJabatan.trim().isNotEmpty) return;
+
+    final doc = await _db.collection('users').doc(request.userId).get();
+    final data = doc.data();
+    if (data == null) return;
+
+    final user = AppUser.fromMap(request.userId, data);
+    // Firestore runs best-effort; if parsing fails, ignore.
+    if (user.jabatanLabel.trim().isEmpty) return;
+
+    // no return; used by offer/create flow.
+  }
+
 
   static Future<void> createTutorSession(TutorSession session) async {
     final existing = await _db

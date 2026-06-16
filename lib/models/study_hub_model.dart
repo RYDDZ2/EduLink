@@ -135,6 +135,9 @@ class StudyHubThread {
   final List<String> tags;
   final int replies;
   final DateTime createdAt;
+  final String? attachmentUrl;
+  final String? attachmentType;
+  final String? attachmentName;
 
   StudyHubThread({
     required this.id,
@@ -147,6 +150,9 @@ class StudyHubThread {
     required this.tags,
     required this.replies,
     required this.createdAt,
+    this.attachmentUrl,
+    this.attachmentType,
+    this.attachmentName,
   });
 
   factory StudyHubThread.fromMap(String id, Map<String, dynamic> data) {
@@ -164,6 +170,9 @@ class StudyHubThread {
           .toList(),
       replies: data['replies'] as int? ?? 0,
       createdAt: createdAt is Timestamp ? createdAt.toDate() : DateTime.now(),
+      attachmentUrl: data['attachmentUrl'] as String?,
+      attachmentType: data['attachmentType'] as String?,
+      attachmentName: data['attachmentName'] as String?,
     );
   }
 
@@ -178,6 +187,9 @@ class StudyHubThread {
       'tags': tags,
       'replies': replies,
       'createdAt': FieldValue.serverTimestamp(),
+      if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
+      if (attachmentType != null) 'attachmentType': attachmentType,
+      if (attachmentName != null) 'attachmentName': attachmentName,
     };
   }
 }
@@ -191,6 +203,9 @@ class StudyHubReply {
   final String authorInitials;
   final String authorAvatarColor;
   final DateTime createdAt;
+  final String? attachmentUrl;
+  final String? attachmentType;
+  final String? attachmentName;
 
   StudyHubReply({
     required this.id,
@@ -201,6 +216,9 @@ class StudyHubReply {
     required this.authorInitials,
     required this.authorAvatarColor,
     required this.createdAt,
+    this.attachmentUrl,
+    this.attachmentType,
+    this.attachmentName,
   });
 
   factory StudyHubReply.fromMap(String id, Map<String, dynamic> data) {
@@ -214,6 +232,9 @@ class StudyHubReply {
       authorInitials: data['authorInitials'] as String? ?? 'AU',
       authorAvatarColor: data['authorAvatarColor'] as String? ?? '#E1F5EE',
       createdAt: createdAt is Timestamp ? createdAt.toDate() : DateTime.now(),
+      attachmentUrl: data['attachmentUrl'] as String?,
+      attachmentType: data['attachmentType'] as String?,
+      attachmentName: data['attachmentName'] as String?,
     );
   }
 
@@ -226,6 +247,9 @@ class StudyHubReply {
       'authorInitials': authorInitials,
       'authorAvatarColor': authorAvatarColor,
       'createdAt': FieldValue.serverTimestamp(),
+      if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
+      if (attachmentType != null) 'attachmentType': attachmentType,
+      if (attachmentName != null) 'attachmentName': attachmentName,
     };
   }
 }

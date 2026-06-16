@@ -226,6 +226,9 @@ class StudyHubService {
     required String authorInitials,
     required String authorAvatarColor,
     required List<String> tags,
+    String? attachmentUrl,
+    String? attachmentType,
+    String? attachmentName,
   }) async {
     try {
       final docRef = _db
@@ -234,7 +237,7 @@ class StudyHubService {
           .collection(_threadsSubcollection)
           .doc();
 
-      final data = {
+      final data = <String, dynamic>{
         'hubId': hubId,
         'title': title,
         'authorId': authorId,
@@ -245,6 +248,9 @@ class StudyHubService {
         'replies': 0,
         'createdAt': FieldValue.serverTimestamp(),
       };
+      if (attachmentUrl != null) data['attachmentUrl'] = attachmentUrl;
+      if (attachmentType != null) data['attachmentType'] = attachmentType;
+      if (attachmentName != null) data['attachmentName'] = attachmentName;
 
       await docRef.set(data);
       await incrementThreads(hubId);
@@ -292,6 +298,9 @@ class StudyHubService {
     required String authorName,
     required String authorInitials,
     required String authorAvatarColor,
+    String? attachmentUrl,
+    String? attachmentType,
+    String? attachmentName,
   }) async {
     try {
       final threadRef = _db
@@ -302,7 +311,7 @@ class StudyHubService {
 
       final replyRef = threadRef.collection('replies').doc();
 
-      final data = {
+      final data = <String, dynamic>{
         'threadId': threadId,
         'content': content,
         'authorId': authorId,
@@ -311,6 +320,9 @@ class StudyHubService {
         'authorAvatarColor': authorAvatarColor,
         'createdAt': FieldValue.serverTimestamp(),
       };
+      if (attachmentUrl != null) data['attachmentUrl'] = attachmentUrl;
+      if (attachmentType != null) data['attachmentType'] = attachmentType;
+      if (attachmentName != null) data['attachmentName'] = attachmentName;
 
       await _db.runTransaction((transaction) async {
         transaction.set(replyRef, data);

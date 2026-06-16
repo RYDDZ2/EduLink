@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_model.dart';
+import '../services/notification_service.dart';
 import 'marketplace_screen.dart';
 import 'materials_quiz_screen.dart';
 import 'profile_screen.dart';
@@ -17,6 +18,18 @@ class StudentHomeScreen extends StatefulWidget {
 
 class _StudentHomeScreenState extends State<StudentHomeScreen> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService.watch(widget.currentUser);
+  }
+
+  @override
+  void dispose() {
+    NotificationService.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

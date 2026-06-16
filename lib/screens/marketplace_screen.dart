@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/help_request_model.dart';
@@ -29,6 +31,8 @@ class MarketplaceScreen extends StatefulWidget {
 class _MarketplaceScreenState extends State<MarketplaceScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  int _inboxCount = 0;
+  StreamSubscription<int>? _inboxCountSub;
 
   bool get _isStudent => widget.currentUser.role == UserRole.student;
   bool get _isTutor => widget.currentUser.role == UserRole.tutor;
@@ -38,11 +42,27 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() => setState(() {}));
+    _subscribeInboxCount();
+  }
+
+  void _subscribeInboxCount() {
+    final Stream<int> countStream;
+    if (_isStudent) {
+      countStream = MarketplaceService.offersForStudent(widget.currentUser.id)
+          .map((offers) => offers.where((o) => o.isPending).length);
+    } else {
+      countStream = MarketplaceService.bookingsForTutor(widget.currentUser.id)
+          .map((bookings) => bookings.where((b) => b.isPending).length);
+    }
+    _inboxCountSub = countStream.listen((count) {
+      if (mounted) setState(() => _inboxCount = count);
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _inboxCountSub?.cancel();
     super.dispose();
   }
 
@@ -80,12 +100,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
                       const SizedBox(height: 12),
                       _SegmentedTabs(
                         controller: _tabController,
-                        tabs: const [
-                          Tab(text: 'Permintaan'),
-                          Tab(text: 'Tutor'),
-                          Tab(text: 'Inbox'),
-                          Tab(text: 'Aktivitas'),
+                        tabLabels: const [
+                          'Permintaan',
+                          'Tutor',
+                          'Inbox',
+                          'Aktivitas',
                         ],
+                        badgeIndex: _inboxCount > 0 ? 2 : null,
                       ),
                       const SizedBox(height: 8),
                       Expanded(
@@ -425,11 +446,13 @@ class _StatsRow extends StatelessWidget {
 
 class _SegmentedTabs extends StatelessWidget {
   final TabController controller;
-  final List<Widget> tabs;
+  final List<String> tabLabels;
+  final int? badgeIndex;
 
   const _SegmentedTabs({
     required this.controller,
-    required this.tabs,
+    required this.tabLabels,
+    this.badgeIndex,
   });
 
   @override
@@ -466,7 +489,35 @@ class _SegmentedTabs extends StatelessWidget {
           fontWeight: FontWeight.w500,
         ),
         dividerColor: Colors.transparent,
-        tabs: tabs,
+        tabs: List.generate(tabLabels.length, (i) {
+          final label = tabLabels[i];
+          if (i == badgeIndex) {
+            return Tab(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text(label),
+                  ),
+                  Positioned(
+                    right: 0,
+                    top: 1,
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          return Tab(text: label);
+        }),
       ),
     );
   }

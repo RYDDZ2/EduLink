@@ -121,22 +121,6 @@ class MarketplaceService {
   }
 
 
-  static Future<void> _enrichHelpRequestJabatanIfMissing(
-    HelpRequest request,
-  ) async {
-    if (request.userJabatan.trim().isNotEmpty) return;
-
-    final doc = await _db.collection('users').doc(request.userId).get();
-    final data = doc.data();
-    if (data == null) return;
-
-    final user = AppUser.fromMap(request.userId, data);
-    // Firestore runs best-effort; if parsing fails, ignore.
-    if (user.jabatanLabel.trim().isEmpty) return;
-
-    // no return; used by offer/create flow.
-  }
-
 
   static Future<void> createTutorSession(TutorSession session) async {
     final existing = await _db
@@ -337,8 +321,8 @@ class MarketplaceService {
     required String sessionId,
     required AppUser sender,
     required String text,
-  }) {
-    return _db
+  }) async {
+    await _db
         .collection('tutoringSessions')
         .doc(sessionId)
         .collection('messages')
@@ -352,6 +336,11 @@ class MarketplaceService {
       'attachmentMime': null,
       'createdAt': FieldValue.serverTimestamp(),
     });
+    await _touchSessionLastMessage(
+      sessionId: sessionId,
+      sender: sender,
+      preview: text.trim(),
+    );
   }
 
   static Future<void> sendMessageImage({
@@ -361,8 +350,8 @@ class MarketplaceService {
     required String imageUrl,
     required String imageName,
     String? mime,
-  }) {
-    return _db
+  }) async {
+    await _db
         .collection('tutoringSessions')
         .doc(sessionId)
         .collection('messages')
@@ -376,6 +365,11 @@ class MarketplaceService {
       'attachmentMime': mime,
       'createdAt': FieldValue.serverTimestamp(),
     });
+    await _touchSessionLastMessage(
+      sessionId: sessionId,
+      sender: sender,
+      preview: text.trim().isEmpty ? '🖼 Gambar' : text.trim(),
+    );
   }
 
   static Future<void> sendMessageDoc({
@@ -385,8 +379,8 @@ class MarketplaceService {
     required String docUrl,
     required String docName,
     String? mime,
-  }) {
-    return _db
+  }) async {
+    await _db
         .collection('tutoringSessions')
         .doc(sessionId)
         .collection('messages')
@@ -399,6 +393,27 @@ class MarketplaceService {
       'attachmentName': docName,
       'attachmentMime': mime,
       'createdAt': FieldValue.serverTimestamp(),
+    });
+    await _touchSessionLastMessage(
+      sessionId: sessionId,
+      sender: sender,
+      preview: text.trim().isEmpty ? '📄 Dokumen: $docName' : text.trim(),
+    );
+  }
+
+  /// Updates the parent session doc with last-message metadata so
+  /// [NotificationService] can detect new incoming messages via stream.
+  static Future<void> _touchSessionLastMessage({
+    required String sessionId,
+    required AppUser sender,
+    required String preview,
+  }) {
+    final short = preview.length > 80 ? '${preview.substring(0, 80)}…' : preview;
+    return _db.collection('tutoringSessions').doc(sessionId).update({
+      'lastMessageSenderId': sender.id,
+      'lastMessageSenderName': sender.name,
+      'lastMessageText': short,
+      'lastMessageAt': FieldValue.serverTimestamp(),
     });
   }
 

@@ -163,6 +163,10 @@ class TutoringSession {
   final String status;
   final DateTime startedAt;
   final DateTime? endedAt;
+  final String? lastMessageSenderId;
+  final String? lastMessageSenderName;
+  final String? lastMessageText;
+  final DateTime? lastMessageAt;
 
   const TutoringSession({
     required this.id,
@@ -179,6 +183,10 @@ class TutoringSession {
     required this.status,
     required this.startedAt,
     this.endedAt,
+    this.lastMessageSenderId,
+    this.lastMessageSenderName,
+    this.lastMessageText,
+    this.lastMessageAt,
   });
 
   bool get isActive => status == 'active';
@@ -213,6 +221,10 @@ class TutoringSession {
       status: data['status'] as String? ?? 'active',
       startedAt: started is Timestamp ? started.toDate() : DateTime.now(),
       endedAt: ended is Timestamp ? ended.toDate() : null,
+      lastMessageSenderId: data['lastMessageSenderId'] as String?,
+      lastMessageSenderName: data['lastMessageSenderName'] as String?,
+      lastMessageText: data['lastMessageText'] as String?,
+      lastMessageAt: (data['lastMessageAt'] as Timestamp?)?.toDate(),
     );
   }
 }

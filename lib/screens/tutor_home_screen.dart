@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_model.dart';
+import '../services/notification_service.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/create_quiz_sheet.dart';
 import 'marketplace_screen.dart';
@@ -18,6 +19,18 @@ class TutorHomeScreen extends StatefulWidget {
 
 class _TutorHomeScreenState extends State<TutorHomeScreen> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService.watch(widget.currentUser);
+  }
+
+  @override
+  void dispose() {
+    NotificationService.cancel();
+    super.dispose();
+  }
 
   void _showCreateQuizSheet() {
     showModalBottomSheet(

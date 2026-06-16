@@ -39,10 +39,39 @@ class StudyHubService {
       };
 
       await docRef.set(data);
+      // Add creator to members subcollection so they aren't double-counted on first visit
+      await docRef.collection('members').doc(creatorId).set({
+        'userId': creatorId,
+        'joinedAt': FieldValue.serverTimestamp(),
+      });
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to create study hub: $e');
     }
+  }
+
+  /// Adds [userId] to the hub's members subcollection (if not already a member)
+  /// and increments the hub's members counter.
+  static Future<void> joinHub(String hubId, String userId) async {
+    final memberRef = _db
+        .collection(_collectionName)
+        .doc(hubId)
+        .collection('members')
+        .doc(userId);
+
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(memberRef);
+      if (!snap.exists) {
+        tx.set(memberRef, {
+          'userId': userId,
+          'joinedAt': FieldValue.serverTimestamp(),
+        });
+        tx.update(
+          _db.collection(_collectionName).doc(hubId),
+          {'members': FieldValue.increment(1)},
+        );
+      }
+    });
   }
 
   // ============= READ =============
@@ -94,6 +123,14 @@ class StudyHubService {
       hubs.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
       return hubs;
     });
+  }
+
+  static Stream<StudyHub?> hubStream(String hubId) {
+    return _db.collection(_collectionName).doc(hubId).snapshots().map(
+          (snap) => snap.exists
+              ? StudyHub.fromMap(snap.id, snap.data() as Map<String, dynamic>)
+              : null,
+        );
   }
 
   static Future<StudyHub?> getStudyHub(String hubId) async {

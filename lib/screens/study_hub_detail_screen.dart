@@ -22,6 +22,14 @@ class StudyHubDetailScreen extends StatefulWidget {
 }
 
 class _StudyHubDetailScreenState extends State<StudyHubDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Auto-join: adds user to members subcollection (no-op if already member)
+    StudyHubService.joinHub(widget.hub.id, widget.currentUser.id)
+        .catchError((_) {});
+  }
+
   void _showCreateThreadSheet() {
     showModalBottomSheet(
       context: context,
@@ -93,17 +101,24 @@ class _StudyHubDetailScreenState extends State<StudyHubDetailScreen> {
                   ],
                   const Divider(height: 1),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _StatColumn(
-                          icon: Icons.people_outline_rounded,
-                          value: '${widget.hub.members}',
-                          label: 'Members'),
-                      _StatColumn(
-                          icon: Icons.forum_outlined,
-                          value: '${widget.hub.activeThreads}',
-                          label: 'Threads'),
-                    ],
+                  StreamBuilder<StudyHub?>(
+                    stream: StudyHubService.hubStream(widget.hub.id),
+                    initialData: widget.hub,
+                    builder: (context, snap) {
+                      final live = snap.data ?? widget.hub;
+                      return Row(
+                        children: [
+                          _StatColumn(
+                              icon: Icons.people_outline_rounded,
+                              value: '${live.members}',
+                              label: 'Members'),
+                          _StatColumn(
+                              icon: Icons.forum_outlined,
+                              value: '${live.activeThreads}',
+                              label: 'Threads'),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),

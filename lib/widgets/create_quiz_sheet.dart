@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
@@ -37,6 +38,9 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
   late QuizDifficulty _difficulty;
   late QuizMaterialSourceType _materialSourceType;
   QuizBookingSession? _selectedSession;
+  // null = loading, [] = loaded but empty
+  List<QuizBookingSession>? _sessions;
+  StreamSubscription<List<QuizBookingSession>>? _sessionSub;
   String? _materialFileName;
   bool _materialWasTrimmed = false;
   bool _isPickingFile = false;
@@ -62,10 +66,26 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
         quiz?.materialSourceType ?? QuizMaterialSourceType.text;
     _materialFileName = quiz?.materialFileName;
     _generatedQuestions = List<QuizQuestion>.from(quiz?.questions ?? const []);
+
+    if (!_isEditing) {
+      _sessionSub = QuizService.tutorBookedSessions(widget.currentUser.id)
+          .listen((sessions) {
+        if (!mounted) return;
+        setState(() {
+          _sessions = sessions;
+          // Clear selection if the chosen session no longer exists in the list
+          if (_selectedSession != null &&
+              !sessions.any((s) => s.id == _selectedSession!.id)) {
+            _selectedSession = null;
+          }
+        });
+      });
+    }
   }
 
   @override
   void dispose() {
+    _sessionSub?.cancel();
     _titleCtrl.dispose();
     _topicCtrl.dispose();
     _materialCtrl.dispose();
@@ -209,53 +229,46 @@ class _CreateQuizSheetState extends State<CreateQuizSheet> {
   }
 
   Widget _sessionPicker() {
-    return StreamBuilder<List<QuizBookingSession>>(
-      stream: QuizService.tutorBookedSessions(widget.currentUser.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _BoxMessage(
-            icon: Icons.sync_rounded,
-            text: 'Memuat sesi booking...',
-          );
-        }
+    final sessions = _sessions;
 
-        if (snapshot.hasError) {
-          return const _BoxMessage(
-            icon: Icons.cloud_off_outlined,
-            text: 'Sesi booking belum bisa dimuat.',
-          );
-        }
+    if (sessions == null) {
+      return const _BoxMessage(
+        icon: Icons.sync_rounded,
+        text: 'Memuat sesi booking...',
+      );
+    }
 
-        final sessions = snapshot.data ?? [];
-        if (sessions.isEmpty) {
-          return const _BoxMessage(
-            icon: Icons.event_busy_rounded,
-            text: 'Belum ada booking aktif untuk dibuatkan quiz.',
-          );
-        }
+    if (sessions.isEmpty) {
+      return const _BoxMessage(
+        icon: Icons.event_busy_rounded,
+        text: 'Belum ada booking aktif untuk dibuatkan quiz.',
+      );
+    }
 
-        return DropdownButtonFormField<String>(
-          initialValue: _selectedSession?.id,
-          isExpanded: true,
-          validator: (value) =>
-              value == null ? 'Pilih sesi siswa terlebih dulu' : null,
-          decoration: _inputDeco('Pilih sesi booking'),
-          items: sessions.map((session) {
-            return DropdownMenuItem(
-              value: session.id,
-              child: Text(
-                '${session.studentName} - ${session.subject}',
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(),
-          onChanged: (id) {
-            setState(() {
-              _selectedSession =
-                  sessions.firstWhere((session) => session.id == id);
-            });
-          },
+    // ValueKey forces the FormField to recreate (and reset initialValue) whenever
+    // the selected session or the sessions list changes — preventing the assertion
+    // that fires when the FormField's internal value is no longer in the items list.
+    return DropdownButtonFormField<String>(
+      key: ValueKey('session_${_selectedSession?.id ?? 'none'}_${sessions.length}'),
+      initialValue: _selectedSession?.id,
+      isExpanded: true,
+      validator: (value) =>
+          value == null ? 'Pilih sesi siswa terlebih dulu' : null,
+      decoration: _inputDeco('Pilih sesi booking'),
+      items: sessions.map((session) {
+        return DropdownMenuItem(
+          value: session.id,
+          child: Text(
+            '${session.studentName} - ${session.subject}',
+            overflow: TextOverflow.ellipsis,
+          ),
         );
+      }).toList(),
+      onChanged: (id) {
+        setState(() {
+          _selectedSession =
+              sessions.firstWhere((session) => session.id == id);
+        });
       },
     );
   }

@@ -81,7 +81,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    KpBadge(label: '${_user.knowledgePoints} KP'),
                     InfoChip(
                       icon: Icons.badge_outlined,
                       label: _user.roleLabel,
@@ -92,26 +91,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          const Row(
-            children: [
-              _ProfileStat(label: 'Hub Joined', value: '5'),
-              SizedBox(width: 8),
-              _ProfileStat(label: 'Quiz Done', value: '12'),
-              SizedBox(width: 8),
-              _ProfileStat(label: 'Booking', value: '4'),
-            ],
-          ),
-          const SizedBox(height: 18),
-          const _MenuTile(
-            icon: Icons.history_rounded,
-            title: 'Aktivitas Belajar',
-            subtitle: 'Ringkasan hub, tutoring, dan quiz terakhir',
-          ),
-          const _MenuTile(
-            icon: Icons.workspace_premium_outlined,
-            title: 'Knowledge Points',
-            subtitle: 'Riwayat penggunaan dan reward KP',
-          ),
           _MenuTile(
             icon: Icons.settings_outlined,
             title: 'Pengaturan Akun',
@@ -157,37 +136,6 @@ class _ProfileAvatar extends StatelessWidget {
                 color: const Color(0xFF0C447C),
               ),
             ),
-    );
-  }
-}
-
-class _ProfileStat extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _ProfileStat({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade100),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(value,
-                style:
-                    const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
-            Text(label,
-                style: const TextStyle(fontSize: 10, color: Colors.black45)),
-          ],
-        ),
-      ),
     );
   }
 }
